@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B1418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hifz">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Hifz — Stacked Memorizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B1418; --ink-2:#122029; --ink-3:#1B303B; --line:#25404C;
+  --parchment:#E8E2D2; --muted:#7E9099;
+  --jade:#2AA17E; --gold:#C9A227; --red:#B4534A; --amber:#D08A2C;
+  --pad:16px;
+  --arabic:'Amiri Quran','Traditional Arabic','Scheherazade New',serif;
+  --ui:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{background:var(--ink);color:var(--parchment);font-family:var(--ui);font-size:var(--uisz,17px);line-height:1.5;
+  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);overscroll-behavior-y:none}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select{font-family:inherit;font-size:inherit}
+header{display:flex;align-items:center;gap:10px;padding:10px var(--pad);border-bottom:1px solid var(--line);flex:none}
+.brand{font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:.7em;color:var(--muted)}
+.brand b{color:var(--jade)}
+#netdot{width:7px;height:7px;border-radius:50%;background:var(--jade);margin-left:auto;flex:none}
+#netdot.off{background:var(--red)}
+nav{display:flex;border-bottom:1px solid var(--line);flex:none}
+nav button{flex:1;padding:13px 2px;font-size:.68em;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);border-bottom:2px solid transparent;font-weight:600}
+nav button[aria-selected="true"]{color:var(--parchment);border-bottom-color:var(--jade)}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--pad);padding-bottom:130px}
+.panel[hidden]{display:none}
+.field{margin-bottom:16px}
+.lbl{display:block;font-size:.76em;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600}
+.ctl{width:100%;padding:12px;background:var(--ink-2);border:1px solid var(--line);border-radius:10px;color:var(--parchment);appearance:none}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+.btn{padding:13px;border-radius:10px;background:var(--ink-3);border:1px solid var(--line);text-align:center;font-weight:600}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--jade);border-color:var(--jade);color:#04120D}
+.btn.dgr{color:var(--red);border-color:#40282a}
+.btn[disabled]{opacity:.45}
+input[type=range]{width:100%;accent-color:var(--jade);height:34px}
+.stepper{display:flex;border:1px solid var(--line);border-radius:10px;background:var(--ink-2);overflow:hidden}
+.stepper button{width:2.9em;height:2.9em;min-width:46px;min-height:46px;font-size:1.3em;color:var(--jade);flex:none}
+.stepper input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:600;font-size:1.1em;padding:0}
+.hint{font-size:.84em;color:var(--muted);margin-top:6px;line-height:1.5}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--ink-3)}
+.sw:last-child{border-bottom:none}.sw p{margin:0;font-size:.84em;color:var(--muted)}
+.tog{width:46px;height:27px;border-radius:14px;background:var(--ink-3);border:1px solid var(--line);position:relative;flex:none}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
+.tog[aria-checked="true"]{background:rgba(42,161,126,.25);border-color:var(--jade)}
+.tog[aria-checked="true"]::after{transform:translateX(19px);background:var(--jade)}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-2)}
+.seg button{flex:1;padding:11px 6px;font-size:.82em;font-weight:600;color:var(--muted);
+  border-right:1px solid var(--line);line-height:1.25}
+.seg button:last-child{border-right:none}
+.seg button[aria-checked="true"]{background:rgba(42,161,126,.2);color:var(--jade)}
+h2{font-size:.82em;letter-spacing:.11em;text-transform:uppercase;color:var(--jade);margin:26px 0 10px;font-weight:600}
+h2:first-child{margin-top:0}
+.readout{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--ink-2);margin-bottom:14px}
+.readout b{font-weight:600;font-size:.98em;display:block}
+.readout small{font-size:.84em;color:var(--muted);margin-top:5px;line-height:1.5;display:block}
+.readout.ok b{color:var(--jade)}
+.readout.warn{border-color:var(--amber)} .readout.warn b{color:var(--amber)}
+.readout.bad{border-color:var(--red)} .readout.bad b{color:var(--red)}
+.shead{font-size:.76em;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+  padding:18px 2px 4px;border-bottom:1px solid var(--ink-3);margin-bottom:4px;font-weight:600}
+.bismline{font-family:var(--arabic);font-size:calc(var(--asz,34px) * .74);text-align:center;color:var(--gold);
+  padding:10px 0;direction:rtl;line-height:2.2}
+.ayah{direction:rtl;text-align:right;font-family:var(--arabic);padding:14px 12px;border-radius:10px;margin:2px 0;
+  line-height:2.35;transition:background .2s,opacity .2s,filter .25s;border-right:3px solid transparent}
+.ayah .t{font-size:var(--asz,34px)}
+.num{display:inline-flex;align-items:center;justify-content:center;min-width:1.55em;height:1.55em;padding:0 .35em;
+  border-radius:50%;border:1px solid var(--line);font-family:var(--ui);font-size:.68em;font-weight:600;
+  color:var(--muted);margin-left:8px;vertical-align:middle}
+.ayah.cur{background:rgba(42,161,126,.13);border-right-color:var(--jade)}
+.ayah.cur .num{border-color:var(--jade);color:var(--jade)}
+.ayah.stk{background:rgba(201,162,39,.13);border-right-color:var(--gold)}
+.ayah.stk .num{border-color:var(--gold);color:var(--gold)}
+.ayah.veiled{filter:blur(7px);opacity:.35;pointer-events:none}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+#bar{position:fixed;left:0;right:0;bottom:0;background:rgba(11,20,24,.97);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);padding:10px var(--pad);padding-bottom:calc(10px + env(safe-area-inset-bottom));z-index:20}
+#bar[hidden]{display:none}
+#prog{height:3px;background:var(--ink-3);border-radius:2px;overflow:hidden;margin-bottom:9px;cursor:pointer}
+#progfill{height:100%;width:0;background:var(--jade)}
+#stat{display:flex;justify-content:space-between;align-items:center;font-size:.76em;color:var(--muted);margin-bottom:9px;gap:8px}
+#phase{font-weight:600;letter-spacing:.09em;text-transform:uppercase;flex:none}
+#pos{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#phase.p-stack{color:var(--gold)} #phase.p-rep{color:var(--jade)}
+#phase.p-round{color:var(--parchment)} #phase.p-listen{color:var(--parchment)} #phase.p-prep{color:var(--amber)}
+.pbtns{display:flex;gap:8px}.pbtns .btn{flex:1}#play{flex:2}
+#prepbar{height:4px;background:var(--ink-3);border-radius:2px;overflow:hidden;margin-bottom:9px}
+#prepbar[hidden]{display:none}
+#prepfill{height:100%;width:0;background:var(--amber);transition:width .2s}
+.card{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;display:flex;align-items:center;gap:12px}
+.card .g{flex:1;min-width:0}.card b{display:block;font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card small{color:var(--muted);font-size:.84em}.card .x{color:var(--red);font-size:1.35em;padding:6px 10px;flex:none}
+.empty{text-align:center;color:var(--muted);padding:38px 20px;font-size:.88em;line-height:1.7}
+.logbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.logbar span{font-size:.72em;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.logbar button{font-size:.76em;color:var(--jade);font-weight:600;padding:4px 8px}
+.log{border:1px solid var(--line);border-radius:10px;background:var(--ink-2);padding:10px 12px;
+  margin-bottom:14px;font-size:.82em;max-height:190px;overflow-y:auto;line-height:1.65;
+  font-variant-numeric:tabular-nums}
+.log .li{display:flex;gap:8px;padding:1px 0}
+.log .li i{flex:none;width:13px;font-style:normal;text-align:center}
+.log .li i.ok{color:var(--jade)} .log .li i.er{color:var(--red)} .log .li i.in{color:var(--muted)}
+.log .li .msg{flex:1;min-width:0;word-break:break-word}
+.log .li.err-line .msg{color:var(--red)}
+.log .code{color:var(--red);font-weight:600}
+#toast{position:fixed;left:50%;bottom:104px;transform:translate(-50%,14px);background:var(--ink-3);
+  border:1px solid var(--jade);padding:11px 18px;border-radius:22px;font-size:.88em;z-index:40;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.diag{font-size:.84em;border-bottom:1px solid var(--ink-3);padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+.diag i{font-style:normal;flex:none;width:16px;font-weight:700}
+.diag .ok{color:var(--jade)} .diag .no{color:var(--red)} .diag .mb{color:var(--amber)}
+.diag div{flex:1;min-width:0} .diag small{display:block;color:var(--muted);word-break:break-word}
+#ver{text-align:center;color:var(--muted);font-size:.76em;padding:22px 0 6px;letter-spacing:.05em}
+.danger{border:1px solid #40282a;border-radius:10px;padding:12px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand"><b>Hifz</b> · Stacked Memorizer</span>
+  <span id="netdot"></span>
+</header>
+
+<nav role="tablist">
+  <button role="tab" data-tab="sel" aria-selected="true">Drill</button>
+  <button role="tab" data-tab="drl" aria-selected="false">Play</button>
+  <button role="tab" data-tab="stc" aria-selected="false">Stitch</button>
+  <button role="tab" data-tab="sav" aria-selected="false">Saved</button>
+  <button role="tab" data-tab="set" aria-selected="false">Settings</button>
+</nav>
+
+<main>
+
+<!-- ================= DRILL SETUP ================= -->
+<section class="panel" id="p-sel">
+  <div class="field">
+    <label class="lbl" for="sfilter">Surah</label>
+    <input class="ctl" id="sfilter" type="search" inputmode="search" autocomplete="off"
+           placeholder="Type a name or number — يس · yaseen · 36" style="margin-bottom:10px">
+    <select class="ctl" id="surah" size="1"><option>Loading…</option></select>
+    <div class="hint" id="sfhint" hidden></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Ayat range</label>
+    <div class="row"><select class="ctl" id="from"></select><select class="ctl" id="to"></select></div>
+  </div>
+  <div class="row" style="margin-bottom:14px">
+    <button class="btn" id="preview">Show text</button>
+  </div>
+  <div class="readout" id="budget"><b id="bmain">—</b><small id="bnote"></small></div>
+
+  <h2>Repetition</h2>
+  <div class="field">
+    <label class="lbl">Each ayah repeats</label>
+    <div class="stepper"><button data-step="-1" data-t="rep">–</button><input id="rep" type="number" inputmode="numeric" min="1" max="20" value="3"><button data-step="1" data-t="rep">+</button></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Whole range repeats</label>
+    <div class="stepper"><button data-step="-1" data-t="rng">–</button><input id="rng" type="number" inputmode="numeric" min="0" max="20" value="5"><button data-step="1" data-t="rng">+</button></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Stack depth — <span id="sdlbl">all previous</span></label>
+    <input type="range" id="sd" min="1" max="20" value="20">
+    <div class="hint">How many earlier ayat replay before each new ayah.</div>
+  </div>
+
+  <div class="row" style="margin-top:22px">
+    <button class="btn pri" id="go">Start drill</button>
+    <button class="btn" id="save">Save range</button>
+  </div>
+</section>
+
+<!-- ================= PLAYER ================= -->
+<section class="panel" id="p-drl" hidden>
+  <div id="logwrap" hidden>
+    <div class="logbar"><span>Activity</span><button id="logcopy">Copy</button></div>
+    <div id="log" class="log"></div>
+  </div>
+  <div id="exprow" hidden style="margin-bottom:14px">
+    <button class="btn" id="expmp3" style="width:100%">Save as MP3</button>
+    <div class="hint" id="exphint"></div>
+  </div>
+  <div id="text"><div class="empty">Set a range on Drill, then tap Start drill.<br>Or build a listening track on Stitch.</div></div>
+</section>
+
+<!-- ================= STITCH ================= -->
+<section class="panel" id="p-stc" hidden>
+  <div class="hint" style="margin-bottom:14px">A plain listening track — each ayah once, in order, and blocks may cross surahs. No repeats, so it stays small: roughly 1 MB per minute.</div>
+
+  <div class="field">
+    <label class="lbl">Add a block</label>
+    <select class="ctl" id="ssurah" style="margin-bottom:10px"></select>
+    <div class="row"><select class="ctl" id="sfrom"></select><select class="ctl" id="sto"></select></div>
+  </div>
+  <button class="btn" id="sadd" style="width:100%">Add block</button>
+
+  <h2>Blocks</h2>
+  <div id="blocks"></div>
+  <div class="readout" id="sreadout"><b id="smain">No blocks yet</b><small id="snote"></small></div>
+
+  <div class="field">
+    <label class="lbl">Gap between ayat</label>
+    <div class="seg" id="sgapmode" role="radiogroup">
+      <button data-v="none"  role="radio">No gap</button>
+      <button data-v="fixed" role="radio">Fixed gap</button>
+    </div>
+    <div id="sgapwrap" style="margin-top:12px">
+      <label class="lbl">Length — <span id="sgaplbl">1.0s</span></label>
+      <input type="range" id="sgap" min="0.5" max="5" step="0.5" value="1">
+    </div>
+    <div class="hint">Separate from the drill gap. No gap gives continuous recitation.</div>
+  </div>
+
+  <div class="row">
+    <button class="btn pri" id="sbuild">Build &amp; play</button>
+    <button class="btn" id="sexp">Build &amp; save MP3</button>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="srecipe">Save recipe</button>
+    <button class="btn dgr" id="sclearb">Clear blocks</button>
+  </div>
+</section>
+
+<!-- ================= SAVED ================= -->
+<section class="panel" id="p-sav" hidden>
+  <h2>Drill ranges</h2>
+  <div id="lists"></div>
+  <h2>Stitch recipes</h2>
+  <div id="recipes"></div>
+  <h2>Backup</h2>
+  <div class="hint">One file holding your ranges, recipes and settings. It lives outside the browser, so Reset everything cannot touch it.</div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="exp">Export backup</button>
+    <button class="btn" id="imp">Import backup</button>
+  </div>
+  <input type="file" id="impf" accept="application/json,.json" hidden>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section class="panel" id="p-set" hidden>
+  <h2>Reciter</h2>
+  <select class="ctl" id="qari"></select>
+  <div class="hint" id="qhint"></div>
+
+  <h2>Drill pause</h2>
+  <div class="seg" id="gapmode" role="radiogroup">
+    <button data-v="none"  role="radio">No gap</button>
+    <button data-v="fixed" role="radio">Fixed gap</button>
+    <button data-v="echo"  role="radio">Match ayah length</button>
+  </div>
+  <div class="field" id="gapwrap" style="margin-top:12px">
+    <label class="lbl">Fixed gap — <span id="gaplbl">1.0s</span></label>
+    <input type="range" id="gap" min="0.5" max="5" step="0.5" value="1">
+  </div>
+  <div class="hint" id="gaphint"></div>
+
+  <h2>Reading</h2>
+  <div class="sw"><div><b>Highlight current ayah</b><p>Marks what is being recited now.</p></div><button class="tog" id="t-hl" role="switch"></button></div>
+  <div class="sw"><div><b>Veil ayat ahead</b><p>Blurs what comes next so your eye can't run ahead.</p></div><button class="tog" id="t-veil" role="switch"></button></div>
+  <div class="sw"><div><b>Play Bismillah each round</b><p>Drill only. Stitched tracks always open a new surah with it.</p></div><button class="tog" id="t-bism" role="switch"></button></div>
+  <div class="field" style="margin-top:14px">
+    <label class="lbl">Arabic size — <span id="aszlbl">34px</span></label>
+    <input type="range" id="asz" min="20" max="72" step="1" value="34">
+    <div class="ayah" style="pointer-events:none;margin-top:4px"><span class="t" id="aszdemo"></span><span class="num">1</span></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Interface size — <span id="uiszlbl">17px</span></label>
+    <input type="range" id="uisz" min="14" max="24" step="1" value="17">
+    <div class="hint">Scales every label, button and menu — everything but the Arabic.</div>
+  </div>
+
+  <h2>Playback</h2>
+  <div class="sw"><div><b>Keep screen awake</b><p>Only a fallback. Stitched audio should survive a locked screen on its own.</p></div><button class="tog" id="t-wake" role="switch"></button></div>
+  <div class="sw"><div><b>Verses in exported MP3</b><p>Embeds timed verses and saves a matching .lrc, so a player like Musicolet shows each ayah as it's recited. Adds a small zip.</p></div><button class="tog" id="t-lyrics" role="switch"></button></div>
+
+  <h2>Storage</h2>
+  <div class="hint" id="cinfo">—</div>
+  <button class="btn" id="clra" style="width:100%;margin-top:10px">Clear downloaded audio</button>
+  <div class="danger">
+    <b style="color:var(--red)">Reset everything</b>
+    <div class="hint">Wipes downloaded audio, cached text, saved ranges, recipes and settings. Export a backup first — this cannot be undone.</div>
+    <button class="btn dgr" id="reset" style="width:100%;margin-top:10px">Reset everything</button>
+  </div>
+
+  <h2>Diagnostics</h2>
+  <div id="diag"></div>
+  <button class="btn" id="rediag" style="margin-top:12px;width:100%">Run checks again</button>
+
+  <div id="ver"></div>
+</section>
+
+</main>
+
+<div id="bar" hidden>
+  <div id="prepbar" hidden><div id="prepfill"></div></div>
+  <div id="prog"><div id="progfill"></div></div>
+  <div id="stat"><span id="phase">Ready</span><span id="pos"></span></div>
+  <div class="pbtns">
+    <button class="btn" id="prev">‹</button>
+    <button class="btn pri" id="play">Play</button>
+    <button class="btn" id="next">›</button>
+    <button class="btn dgr" id="stop">Stop</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   Hifz v3
+   Text : api.alquran.cloud (quran-uthmani)   Audio: everyayah.com (per ayah)
+
+   Playback is STITCHED: a session becomes one continuous MP3 before it plays.
+   v1 swapped the audio source between ayat, and a backgrounded page is not
+   allowed to start a new source — so audio died the moment the screen locked.
+   One source, started once, needs no JavaScript at all while it plays, so
+   there is nothing left to throttle or block.
+   ========================================================================== */
+
+const VERSION = 'v11';
+const BUILD   = '2026-07-18 15:00 UTC';
+
+const RECITERS = [
+  {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
+  {id:'Minshawy_Murattal_128kbps',   name:'Mohamed Siddiq El-Minshawi', bps:128},
+  {id:'Alafasy_128kbps',             name:'Mishary Rashid Alafasy',    bps:128},
+  {id:'Abdul_Basit_Murattal_192kbps',name:'Abdul Basit (Murattal)',    bps:192}
+];
+const API = 'https://api.alquran.cloud/v1';
+const AUD = 'https://everyayah.com/data';
+const WARN_MB = 25, MAX_MB = 60, PART_MB = 22;
+
+// Digital-silence MPEG1 Layer III frames, 44.1kHz stereo. 1152 samples =
+// 26.122ms each; repeat one to build a gap of any length.
+// One PER BITRATE, matched to the reciter. Mixing (say) 192k recitation with
+// 128k silence still decodes, but makes the stream VBR with no VBR header — so
+// the browser, which derives time from bytes/bitrate, reports a wrong duration
+// and SEEKS TO THE WRONG PLACE. Measured: 0.66s drift in 29s, and it compounds.
+const SIL_B64 = {
+128:'//uSZECP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==',
+192:'//uyZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV'
+};
+const SIL_MS = 1152/44100*1000;
+let SIL = {};
+
+const pad3 = n => String(n).padStart(3,'0');
+const audioURL = (q,s,a) => `${AUD}/${q}/${pad3(s)}${pad3(a)}.mp3`;
+const $ = id => document.getElementById(id);
+const bps = () => (RECITERS.find(r=>r.id===S.qari)||{bps:128}).bps;
+const mmss = s => { s=Math.max(0,Math.round(s)); const m=Math.floor(s/60), sec=String(s%60).padStart(2,'0');
+  return m>=60 ? `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}:${sec}` : `${m}:${sec}`; };
+const sName = n => { const s = SURAHS.find(x=>x.n===n); return s ? s.en : 'Surah '+n; };
+const ascii = s => s.replace(/[^\x20-\x7E]/g,'').replace(/[\/\\:*?"<>|]/g,'-').replace(/\s+/g,' ').trim();
+
+const DEF = {qari:'Husary_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
+             wake:false, asz:34, uisz:17, rep:3, rng:5, sd:20, surah:1, from:1, to:7,
+             sgap:1, sgapmode:'none', lyrics:true};
+const LS = {
+  get(k,d){ try{ const v=localStorage.getItem('hifz.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem('hifz.'+k, JSON.stringify(v)); }catch(e){} }
+};
+let S       = Object.assign({}, DEF, LS.get('s',{}));
+let LISTS   = LS.get('lists',[]);
+let RECIPES = LS.get('recipes',[]);
+let BLOCKS  = LS.get('blocks',[]);
+const saveS = () => LS.set('s',S);
+const saveL = () => LS.set('lists',LISTS);
+const saveR = () => LS.set('recipes',RECIPES);
+const saveB = () => LS.set('blocks',BLOCKS);
+if(!LS.get('bump4',false)){
+  if(!(S.asz > 25)) S.asz = DEF.asz;              // only if never raised by hand
+  if(typeof S.uisz !== 'number') S.uisz = DEF.uisz;
+  saveS(); LS.set('bump4',true);
+}
+// v6: fold the old echo flag + zero-gap into the new radio modes, once.
+if(!LS.get('gapmig6',false)){
+  if(typeof S.gapmode !== 'string') S.gapmode = S.echo ? 'echo' : (S.gap>0 ? 'fixed' : 'none');
+  if(typeof S.sgapmode !== 'string') S.sgapmode = (S.sgap>0 ? 'fixed' : 'none');
+  if(!(S.gap>0))  S.gap  = DEF.gap;    // keep a sane slider value even in no-gap mode
+  if(!(S.sgap>0)) S.sgap = DEF.sgap;
+  delete S.echo;
+  saveS(); LS.set('gapmig6',true);
+}
+
+let SURAHS = [], TEXT = {}, BISM = '';
+let SEG = [], PARTS = [], TOTAL = 0, pi = 0, segI = -1;
+let VIEW = [], MODE = 'drill', LABEL = 'Hifz';
+let wake = null, preparing = false;
+let DL = {cache:0, net:0};   // per-build tally of saved vs downloaded audio
+
+let tt; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on');
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2800); }
+
+// Error carrying a short code, shown in the activity log for troubleshooting.
+const E = (code,msg) => { const e=new Error(msg); e.code=code; return e; };
+
+/* ---------------------------------------------------------- activity log */
+let logRows = [], logProgRow = null;
+function clearLog(){ const l=$('log'); if(!l) return;
+  l.innerHTML=''; logRows=[]; logProgRow=null; $('logwrap').hidden=false; }
+function stamp(){ const d=new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
+function logLine(msg, kind){          // kind: 'in' | 'ok' | 'er'
+  const l=$('log'); if(!l) return null;
+  kind = kind||'in';
+  const mark = kind==='ok'?'✓':kind==='er'?'✗':'›';
+  const row=document.createElement('div');
+  row.className='li'+(kind==='er'?' err-line':'');
+  row.innerHTML='<i></i><span class="msg"></span>';
+  row.querySelector('i').textContent=mark; row.querySelector('i').className=kind;
+  row.querySelector('.msg').textContent=msg;
+  l.appendChild(row); l.scrollTop=l.scrollHeight;
+  logRows.push(`[${stamp()}] ${mark} ${msg}`);
+  return row;
+}
+// A single line that updates in place (for "Downloading N of M…").
+function logProg(msg){
+  const l=$('log'); if(!l) return;
+  if(!logProgRow){ logProgRow=document.createElement('div'); logProgRow.className='li';
+    logProgRow.innerHTML='<i class="in">›</i><span class="msg"></span>'; l.appendChild(logProgRow); }
+  logProgRow.querySelector('.msg').textContent=msg; l.scrollTop=l.scrollHeight;
+}
+function logProgDone(msg){
+  if(logProgRow){ logProgRow.querySelector('i').textContent='✓'; logProgRow.querySelector('i').className='ok';
+    logProgRow.querySelector('.msg').textContent=msg;
+    logRows.push(`[${stamp()}] ✓ ${msg}`); logProgRow=null; }
+  else logLine(msg,'ok');
+}
+function logError(e){
+  const code = (e && e.code) || 'ERR';
+  const msg  = (e && e.message) || 'Unknown error';
+  logLine(`[${code}] ${msg}`, 'er');
+}
+// Clipboard API is blocked outside secure contexts (e.g. content:// / file://),
+// so fall back to a hidden textarea + execCommand.
+function fallbackCopy(text, done){
+  try{
+    const ta=document.createElement('textarea'); ta.value=text;
+    ta.style.cssText='position:fixed;left:-9999px;top:0'; document.body.appendChild(ta);
+    ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); done && done();
+  }catch(e){ toast('Copy not supported — screenshot the log instead'); }
+}
+
+/* --------------------------------------------------------------- storage */
+const DB = (()=>{
+  let p, dead = false;
+  const open = () => p || (p = new Promise((res,rej)=>{
+    let r; try{ r = indexedDB.open('hifz',2); }catch(e){ dead=true; return rej(e); }
+    r.onupgradeneeded = e => { const d=e.target.result;
+      if(!d.objectStoreNames.contains('audio')) d.createObjectStore('audio');
+      if(!d.objectStoreNames.contains('text'))  d.createObjectStore('text'); };
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = () => { dead=true; rej(r.error); };
+    r.onblocked = () => { dead=true; rej(new Error('blocked')); };
+  }));
+  const tx = async (store,mode,fn) => {
+    if(dead) throw new Error('storage unavailable');
+    const d = await open();
+    return new Promise((res,rej)=>{
+      const t = d.transaction(store,mode), q = fn(t.objectStore(store));
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    });
+  };
+  return {
+    get:  (s,k)   => tx(s,'readonly', o=>o.get(k)),
+    put:  (s,k,v) => tx(s,'readwrite',o=>o.put(v,k)),
+    keys: (s)     => tx(s,'readonly', o=>o.getAllKeys()),
+    clear:(s)     => tx(s,'readwrite',o=>o.clear()),
+    probe: async ()=>{ await tx('text','readwrite',o=>o.put(1,'__probe')); return true; }
+  };
+})();
+
+/* ----------------------------------------------------------- mp3 plumbing */
+const b64ToU8 = b => { const s=atob(b), u=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
+
+// An ID3 tag landing mid-stream makes decoders choke ("Header missing").
+// Husary's files carry one; the others don't.
+function stripTags(u8){
+  let a = 0, b = u8.length;
+  if(u8[0]===0x49 && u8[1]===0x44 && u8[2]===0x33)
+    a = 10 + ((u8[6]&0x7f)<<21 | (u8[7]&0x7f)<<14 | (u8[8]&0x7f)<<7 | (u8[9]&0x7f));
+  if(b-a > 128 && u8[b-128]===0x54 && u8[b-127]===0x41 && u8[b-126]===0x47) b -= 128;
+  while(a < b-1 && !(u8[a]===0xFF && (u8[a+1]&0xE0)===0xE0)) a++;
+  return u8.subarray(a,b);
+}
+const BR_V1L3 = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
+const BR_V2L3 = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0];
+const SR_TBL  = {3:[44100,48000,32000], 2:[22050,24000,16000], 0:[11025,12000,8000]};
+
+// Exact duration by counting frames — matches the stitched stream precisely.
+// Reading it off an <audio> element is an estimate and would drift.
+function mp3Dur(u8){
+  let i = 0, secs = 0, n = 0;
+  while(i < u8.length-4){
+    if(!(u8[i]===0xFF && (u8[i+1]&0xE0)===0xE0)){ i++; continue; }
+    const ver=(u8[i+1]>>3)&3, lay=(u8[i+1]>>1)&3;
+    const brI=(u8[i+2]>>4)&15, srI=(u8[i+2]>>2)&3, pad=(u8[i+2]>>1)&1;
+    const srT = SR_TBL[ver];
+    if(lay!==1 || !srT || brI===0 || brI===15 || srI===3){ i++; continue; }
+    const sr = srT[srI], br = (ver===3?BR_V1L3:BR_V2L3)[brI]*1000;
+    const len = Math.floor((ver===3?144:72)*br/sr) + pad;
+    if(len < 4){ i++; continue; }
+    secs += (ver===3?1152:576)/sr; n++; i += len;
+  }
+  return n ? secs : 0;
+}
+// ID3v2.3 tag: title/artist/album (ASCII) plus, optionally, embedded lyrics.
+// Lyrics are Arabic, so they go in a USLT frame encoded as UTF-16. The tag sits
+// at the FRONT and is skipped by decoders, so it never disturbs playback.
+function id3(title, artist, album, lrc){
+  const encA = s => [...ascii(s)].map(c=>c.charCodeAt(0));
+  const textFrame = (id,text) => { const d=[0,...encA(text),0], z=d.length;
+    return [...encA(id),(z>>>24)&255,(z>>>16)&255,(z>>>8)&255,z&255,0,0,...d]; };
+  let body = [...textFrame('TIT2',title), ...textFrame('TPE1',artist), ...textFrame('TALB',album)];
+  if(lrc){
+    const bom=[0xFF,0xFE];
+    const u16 = str => { const o=[];
+      for(const ch of str){ let c=ch.codePointAt(0);
+        if(c>0xFFFF){ c-=0x10000; const hi=0xD800+(c>>10), lo=0xDC00+(c&0x3FF);
+          o.push(hi&255,hi>>8,lo&255,lo>>8); }
+        else o.push(c&255,c>>8); }
+      return o; };
+    // USLT = [enc=1][lang 'ara'][descriptor: BOM + terminator][lyrics: BOM + text]
+    const content = [0x01, 0x61,0x72,0x61, ...bom,0x00,0x00, ...bom, ...u16(lrc)];
+    const z = content.length;
+    body = body.concat([0x55,0x53,0x4C,0x54, (z>>>24)&255,(z>>>16)&255,(z>>>8)&255,z&255, 0,0, ...content]);
+  }
+  const n = body.length;
+  return new Uint8Array([0x49,0x44,0x33,3,0,0,(n>>21)&0x7f,(n>>14)&0x7f,(n>>7)&0x7f,n&0x7f,...body]);
+}
+// Verse text for one segment: ﴿١١﴾ + the ayah (or the Bismillah line).
+const arabicNum = n => String(n).replace(/[0-9]/g, d=>'٠١٢٣٤٥٦٧٨٩'[+d]);
+function segLyric(seg){
+  if(seg.bism) return BISM;
+  const t = (TEXT[seg.s]||[])[seg.a-1];
+  return `﴿${arabicNum(seg.a)}﴾ ${t ? t.text : ''}`;
+}
+// LRC for one part: [mm:ss.xx] per segment, timed to that part's local clock.
+function buildLRC(part, title){
+  const reciter = (RECITERS.find(r=>r.id===S.qari)||{}).name||'';
+  const out = [`[ti:${title}]`, `[ar:${reciter}]`, '[re:Hifz]'];
+  for(const s of SEG){
+    if(s.p !== part) continue;
+    const t = Math.max(0, s.l0);
+    const m = Math.floor(t/60), sec = (t%60).toFixed(2).padStart(5,'0');
+    out.push(`[${String(m).padStart(2,'0')}:${sec}]${segLyric(s)}`);
+  }
+  return out.join('\n');
+}
+
+/* --------------------------------------------------------------- fetching */
+// fetch with a hard timeout, so one stalled request can't hang "Preparing"
+// forever. AbortController fires after ms, turning a silent hang into a clear
+// error the caller can report.
+async function fetchT(url, ms=20000){
+  const c = new AbortController();
+  const t = setTimeout(()=>c.abort(), ms);
+  try{ return await fetch(url, {signal:c.signal}); }
+  finally{ clearTimeout(t); }
+}
+async function loadSurahs(){
+  const c = LS.get('surahs',null);
+  // require .tr too, so caches from v4 (which lacked it) re-fetch for search
+  if(c && c.length===114 && c[0].tr){ SURAHS = c; buildSearchIndex(); return; }
+  let r; try{ r = await fetchT(`${API}/surah`); }
+  catch(e){ throw E('NET_LIST', 'Could not reach the surah list — no connection?'); }
+  if(!r.ok) throw E('NET_LIST_'+r.status, 'Surah list failed to load ('+r.status+')');
+  SURAHS = (await r.json()).data.map(s=>({n:s.number, ar:s.name, en:s.englishName,
+                                          tr:s.englishNameTranslation, count:s.numberOfAyahs}));
+  LS.set('surahs', SURAHS);
+  buildSearchIndex();
+}
+async function loadBismillah(){
+  BISM = LS.get('bism','');
+  if(BISM) return;
+  const r = await fetchT(`${API}/surah/1/quran-uthmani`);
+  BISM = (await r.json()).data.ayahs[0].text.replace(/^\uFEFF/,'').trim();
+  LS.set('bism', BISM);
+}
+// The edition glues Bismillah onto ayah 1 of every surah but 1 and 9, while the
+// audio does NOT recite it. Left in, text and voice drift apart on the first
+// ayah of every surah. Al-Fatiha's ayah 1 IS the Bismillah — canonical string.
+async function loadSurah(n){
+  if(TEXT[n]) return TEXT[n];
+  let c = null;
+  try{ c = await DB.get('text', n); }catch(e){}
+  if(!c){
+    let r; try{ r = await fetchT(`${API}/surah/${n}/quran-uthmani`); }
+    catch(e){ throw E('NET_TEXT', 'Text for surah '+n+' stalled — check your connection'); }
+    if(!r.ok) throw E('NET_TEXT_'+r.status, 'Text for surah '+n+' failed ('+r.status+')');
+    c = (await r.json()).data.ayahs.map(a=>({n:a.numberInSurah, text:a.text.replace(/^\uFEFF/,'')}));
+    if(n!==1 && n!==9 && c[0] && BISM && c[0].text.startsWith(BISM))
+      c[0].text = c[0].text.slice(BISM.length).trim();
+    try{ await DB.put('text', n, c); }catch(e){}
+  }
+  TEXT[n] = c; return c;
+}
+async function getBytes(s,a){
+  const k = `${S.qari}/${pad3(s)}${pad3(a)}`;
+  let blob = null;
+  try{ blob = await DB.get('audio',k); }catch(e){}
+  if(blob){ DL.cache++; }
+  else {
+    let r = null;
+    for(let attempt=0; attempt<2 && !(r && r.ok); attempt++){
+      try{ r = await fetchT(audioURL(S.qari,s,a), 20000); }
+      catch(e){ r = null; }   // timeout or network drop — retry once
+    }
+    if(!r) throw E('NET_TIMEOUT', `Audio ${s}:${a} stalled — check your connection and try again`);
+    if(!r.ok) throw E('NET_AUDIO_'+r.status, `Audio ${s}:${a} not found (${r.status})`);
+    blob = await r.blob();
+    DL.net++;
+    try{ await DB.put('audio',k,blob); }catch(e){}
+  }
+  return stripTags(new Uint8Array(await blob.arrayBuffer()));
+}
+
+/* ------------------------------------------------------------ drill queue */
+function buildQueue(from,to,reps,rounds,depth){
+  const q = [];
+  for(let i=from;i<=to;i++){
+    if(i>from){ const st=Math.max(from,i-depth); for(let j=st;j<i;j++) q.push({a:j,k:'stack'}); }
+    for(let r=0;r<reps;r++) q.push({a:i,k:'rep',r:r+1,of:reps});
+  }
+  for(let r=0;r<rounds;r++) for(let i=from;i<=to;i++) q.push({a:i,k:'round',r:r+1,of:rounds});
+  return q;
+}
+function countQueue(from,to,reps,rounds,depth){
+  const n = to-from+1; let st=0;
+  for(let i=1;i<n;i++) st += Math.min(i,depth);
+  return st + n*reps + n*rounds;
+}
+// Live estimate, no network: recitation time tracks letter count (r=0.94 over a
+// 54-ayah sample; secs ~= 0.39*letters + 1.9). The muqatta'at are the known
+// exception — recited letter by letter, so 3 letters can run 6 seconds.
+const MUQ = new Set([2,3,7,10,11,12,13,14,15,19,20,26,27,28,29,30,31,32,36,38,40,41,42,43,44,45,46,50,68]);
+function estAyah(text,surah,num){
+  const L = text.replace(/[\u064B-\u0652\u0670\u06D6-\u06ED\s]/g,'').length;
+  if(num===1 && MUQ.has(surah) && L<=10) return 2.0*L + 3;
+  return 0.39*L + 1.9;
+}
+const toMB = secs => secs*(bps()*1000/8)/1048576;
+// Drill gap after an ayah of duration d (seconds), by mode. Returns seconds.
+const drillGap = d => S.gapmode==='echo' ? d : (S.gapmode==='none' ? 0 : S.gap);
+// Stitch gap in seconds, by mode.
+const stitchGap = () => S.sgapmode==='none' ? 0 : S.sgap;
+
+/* ------------------------------------------------------------ THE STITCH */
+// items: [{s, a, meta}]      gapFn(dur, item, i) -> milliseconds
+async function stitch(items, gapFn, onProg){
+  const uniq = [...new Set(items.map(x=>x.s+':'+x.a))];
+  const bytes = new Map(), durs = new Map();
+  for(let i=0;i<uniq.length;i++){
+    const [s,a] = uniq[i].split(':').map(Number);
+    onProg && onProg(i, uniq.length);
+    const u8 = await getBytes(s,a);
+    bytes.set(uniq[i], u8); durs.set(uniq[i], mp3Dur(u8));
+    await new Promise(r=>setTimeout(r,0));      // let the UI paint
+  }
+  // Silence MUST match the reciter's bitrate — see the SIL_B64 note above.
+  const frame = SIL[bps()] || SIL[128];
+  const silFor = ms => { const n = Math.max(0, Math.round(ms/SIL_MS));
+    const u = new Uint8Array(frame.length*n);
+    for(let i=0;i<n;i++) u.set(frame, i*frame.length);
+    return {u8:u, dur:n*SIL_MS/1000}; };
+
+  const seg = [], parts = [];
+  let chunks = [], partBytes = 0, partStart = 0, t = 0;
+  const close = () => { if(!chunks.length) return;
+    parts.push({blob:new Blob(chunks,{type:'audio/mpeg'}), url:null, start:partStart, dur:t-partStart});
+    chunks=[]; partBytes=0; partStart=t; };
+
+  for(let i=0;i<items.length;i++){
+    const it = items[i], k = it.s+':'+it.a;
+    const u8 = bytes.get(k), d = durs.get(k);
+    if(partBytes && partBytes + u8.length > PART_MB*1048576) close();
+    seg.push({g0:t, g1:t+d, s:it.s, a:it.a, k:it.meta.k, r:it.meta.r, of:it.meta.of,
+              bism:!!it.meta.bism, p:parts.length});
+    chunks.push(u8); partBytes += u8.length; t += d;
+    if(i < items.length-1){
+      const g = silFor(gapFn(d, it, i));
+      if(g.u8.length){ chunks.push(g.u8); partBytes += g.u8.length; t += g.dur; }
+    }
+  }
+  close();
+  seg.forEach(x => x.l0 = x.g0 - parts[x.p].start);
+  return {parts, seg, total:t};
+}
+
+/* --------------------------------------------------------------- playback */
+let el = null;
+function ensureEl(){
+  if(el) return el;
+  el = new Audio(); el.preload='auto'; el.setAttribute('playsinline','');
+  el.addEventListener('timeupdate', tick);
+  el.addEventListener('ended', ()=>{
+    if(pi < PARTS.length-1){ loadPart(pi+1); el.play().catch(()=>{}); } else finish();
+  });
+  el.addEventListener('play',  ()=>{ $('play').textContent='Pause'; reqWake(); });
+  el.addEventListener('pause', ()=>{ if(!el.ended) $('play').textContent='Play'; relWake(); });
+  return el;
+}
+const partURL = i => PARTS[i].url || (PARTS[i].url = URL.createObjectURL(PARTS[i].blob));
+function loadPart(i){ pi=i; ensureEl().src = partURL(i); }
+const gTime = () => PARTS[pi] ? PARTS[pi].start + (el?el.currentTime:0) : 0;
+function seekTo(g){
+  if(!PARTS.length) return;
+  g = Math.max(0, Math.min(g, TOTAL-0.05));
+  let p = PARTS.findIndex(x => g >= x.start && g < x.start+x.dur);
+  if(p < 0) p = PARTS.length-1;
+  const was = el && !el.paused;
+  if(p !== pi) loadPart(p);
+  const set = ()=>{ try{ el.currentTime = g - PARTS[pi].start; }catch(e){} };
+  if(el.readyState >= 1) set(); else el.addEventListener('loadedmetadata', set, {once:true});
+  if(was) el.play().catch(()=>{});
+  tick();
+}
+function findSeg(g){
+  let lo=0, hi=SEG.length-1;
+  while(lo<=hi){ const m=(lo+hi)>>1;
+    if(g < SEG[m].g0) hi=m-1; else if(g >= SEG[m].g1) lo=m+1; else return m; }
+  for(let i=SEG.length-1;i>=0;i--) if(SEG[i].g1 <= g) return i;   // inside a gap
+  return -1;
+}
+function tick(){
+  if(!SEG.length) return;
+  const g = gTime();
+  $('progfill').style.width = (TOTAL ? g/TOTAL*100 : 0)+'%';
+  const i = findSeg(g);
+  if(i < 0) return;
+  if(i !== segI){ segI = i; paint(SEG[i]); }
+  status(SEG[i], g);
+}
+function jump(dir){
+  if(!SEG.length) return;
+  let i = Math.max(0, findSeg(gTime()));
+  const key = SEG[i].s+':'+SEG[i].a;
+  if(dir < 0){
+    if(gTime() - SEG[i].g0 > 1.2) return seekTo(SEG[i].g0);   // restart this ayah first
+    while(i>0 && SEG[i].s+':'+SEG[i].a === key) i--;
+    const k2 = SEG[i].s+':'+SEG[i].a;
+    while(i>0 && SEG[i-1].s+':'+SEG[i-1].a === k2) i--;
+  } else {
+    while(i < SEG.length-1 && SEG[i].s+':'+SEG[i].a === key) i++;
+  }
+  seekTo(SEG[i].g0);
+}
+function stop(){
+  if(el) el.pause();
+  if(PARTS.length){ loadPart(0); try{ el.currentTime=0; }catch(e){} }
+  segI=-1; paint(null);
+  $('progfill').style.width='0';
+  $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
+  $('play').textContent='Play';
+}
+function finish(){
+  relWake(); $('play').textContent='Play';
+  $('phase').textContent='Complete'; $('phase').className='p-rep'; $('pos').textContent='';
+  $('progfill').style.width='100%'; segI=-1; paint(null);
+  toast(MODE==='drill' ? 'Range complete. May Allah make it firm.' : 'Track complete.');
+}
+async function reqWake(){
+  if(!S.wake || !('wakeLock' in navigator) || wake) return;
+  try{ wake = await navigator.wakeLock.request('screen');
+       wake.addEventListener('release', ()=>{ wake=null; }); }catch(e){}
+}
+function relWake(){ try{ wake && wake.release(); }catch(e){} wake=null; }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && el && !el.paused) reqWake(); });
+
+/* -------------------------------------------------------------- rendering */
+const PHASE = {stack:'Stack', rep:'Repeat', round:'Full range', listen:'Playing'};
+function status(s,g){
+  $('phase').textContent = PHASE[s.k] || 'Playing';
+  $('phase').className = 'p-'+(s.k||'listen');
+  let d;
+  if(s.bism)             d = 'Bismillah';
+  else if(s.k==='stack') d = `Recalling ayah ${s.a}`;
+  else if(s.k==='rep')   d = `Ayah ${s.a} · rep ${s.r}/${s.of}`;
+  else if(s.k==='round') d = `Ayah ${s.a} · round ${s.r}/${s.of}`;
+  else                   d = `${sName(s.s)} ${s.a}`;
+  $('pos').textContent = `${d} · ${mmss(g)}/${mmss(TOTAL)}`;
+}
+function paint(s){
+  document.querySelectorAll('#text .ayah').forEach(r=>{
+    r.classList.remove('cur','stk','veiled');
+    if(!s) return;
+    const same = !s.bism && (+r.dataset.s===s.s && +r.dataset.a===s.a);
+    if(S.hl && same) r.classList.add(s.k==='stack' ? 'stk' : 'cur');
+    if(S.veil && MODE==='drill' && s.k!=='round' && +r.dataset.s===s.s){
+      const edge = SEG.slice(0,segI+1).reduce((m,x)=> x.k==='rep' ? Math.max(m,x.a) : m, s.a);
+      if(+r.dataset.a > edge) r.classList.add('veiled');
+    }
+  });
+  const on = document.querySelector('#text .ayah.cur, #text .ayah.stk');
+  if(on) on.scrollIntoView({block:'center', behavior:'smooth'});
+}
+// VIEW: the ordered list of ayat on screen, [{s,a}].
+function renderView(){
+  const box = $('text'); box.innerHTML='';
+  const multi = new Set(VIEW.map(v=>v.s)).size > 1;
+  let last = null;
+  VIEW.forEach(v=>{
+    if(v.s !== last){
+      if(multi){
+        const h = document.createElement('div'); h.className='shead';
+        h.textContent = `${v.s}. ${sName(v.s)}`; box.appendChild(h);
+      }
+      // Bismillah opens each new surah — matching what the audio does.
+      if(v.s!==9 && !(v.s===1 && v.a===1)){
+        const b = document.createElement('div'); b.className='bismline';
+        b.textContent = BISM; box.appendChild(b);
+      }
+      last = v.s;
+    }
+    const t = (TEXT[v.s]||[])[v.a-1];
+    const d = document.createElement('div');
+    d.className='ayah'; d.dataset.s=v.s; d.dataset.a=v.a;
+    d.innerHTML = `<span class="t"></span><span class="num">${v.a}</span>`;
+    d.querySelector('.t').textContent = t ? t.text : '…';
+    box.appendChild(d);
+  });
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+}
+function media(){
+  if(!('mediaSession' in navigator)) return;
+  try{ if(typeof MediaMetadata==='function')
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: LABEL, artist:(RECITERS.find(r=>r.id===S.qari)||{}).name||'', album:'Hifz'});
+  }catch(e){}
+  try{
+    navigator.mediaSession.setActionHandler('play',  ()=> el && el.play());
+    navigator.mediaSession.setActionHandler('pause', ()=> el && el.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>jump(-1));
+    navigator.mediaSession.setActionHandler('nexttrack', ()=>jump(1));
+  }catch(e){}
+}
+function prog(i,n){
+  $('pos').textContent = `Downloading ${i+1} of ${n}`;
+  $('prepfill').style.width = ((i/n)*80)+'%';
+  logProg(`Preparing audio ${i+1} of ${n}…`);
+}
+function prepStart(){ preparing=true; $('bar').hidden=false; $('prepbar').hidden=false;
+  $('exprow').hidden=true; $('phase').textContent='Preparing'; $('phase').className='p-prep'; }
+function prepEnd(){ preparing=false; $('prepfill').style.width='100%';
+  setTimeout(()=>{ $('prepbar').hidden=true; $('prepfill').style.width='0'; },350); }
+function showExport(){
+  $('exprow').hidden = false;
+  const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+  $('exphint').textContent = `${mmss(TOTAL)} · ${mb.toFixed(1)} MB${PARTS.length>1?` · saves as a zip of ${PARTS.length} files`:''}`;
+}
+
+/* ------------------------------------------------------------ file saving */
+function saveBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+// Minimal STORE-only ZIP (no compression — MP3 is already compressed). Lets a
+// split session download as ONE file instead of several the browser may block.
+const CRC_T = (()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; }
+  return t; })();
+function crc32(u8){ let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++) c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0; }
+function makeZip(files){   // files: [{name, u8}] -> Blob
+  const u16=n=>[n&255,(n>>8)&255], u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  const enc=new TextEncoder(), chunks=[], central=[]; let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name), crc=crc32(f.u8), sz=f.u8.length;
+    const lfh=[...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0x21),
+      ...u32(crc),...u32(sz),...u32(sz),...u16(name.length),...u16(0)];
+    chunks.push(new Uint8Array(lfh), name, f.u8);
+    central.push([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0x21),
+      ...u32(crc),...u32(sz),...u32(sz),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(0),...u32(off),...name]);
+    off += lfh.length + name.length + sz;
+  }
+  const cdStart=off; let cd=[];
+  for(const c of central){ cd=cd.concat(c); off+=c.length; }
+  const eocd=[...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),
+    ...u32(off-cdStart),...u32(cdStart),...u16(0)];
+  chunks.push(new Uint8Array(cd), new Uint8Array(eocd));
+  return new Blob(chunks,{type:'application/zip'});
+}
+async function exportAudio(){
+  if(!PARTS.length) return toast('Nothing built yet');
+  const artist = (RECITERS.find(r=>r.id===S.qari)||{}).name||'';
+  const base = ascii(LABEL) || 'Hifz track';
+  const withLrc = S.lyrics && SEG.length;
+  const btn=$('expmp3'); if(btn){ btn.disabled=true; btn.textContent='Packaging…'; }
+  try{
+    const files=[];
+    for(let i=0;i<PARTS.length;i++){
+      const title = ascii(PARTS.length>1 ? `${base} part ${i+1} of ${PARTS.length}` : base);
+      const lrc = withLrc ? buildLRC(i, title) : null;
+      const tag = id3(title, artist, 'Hifz', lrc);   // lyrics ride inside the MP3
+      const body = new Uint8Array(await PARTS[i].blob.arrayBuffer());
+      const u8 = new Uint8Array(tag.length + body.length);
+      u8.set(tag,0); u8.set(body,tag.length);
+      files.push({name:`${title}.mp3`, u8});
+      // matching .lrc beside it — same base name, which is how folder players pair them
+      if(lrc) files.push({name:`${title}.lrc`, u8:new TextEncoder().encode(lrc)});
+      await new Promise(r=>setTimeout(r,0));   // let the UI breathe
+    }
+    // A lone MP3 (no lyrics) downloads directly and plays on a tap. Anything
+    // with a paired .lrc, or split into parts, goes in one zip — so the files
+    // stay together and the browser isn't asked to fire several downloads.
+    if(files.length === 1){
+      saveBlob(new Blob([files[0].u8],{type:'audio/mpeg'}), files[0].name);
+      logLine(`Saved ${files[0].name}`, 'ok');
+      toast('Saved to your downloads');
+    } else {
+      saveBlob(makeZip(files), `${base}.zip`);
+      const mp3s = files.filter(f=>f.name.endsWith('.mp3')).length;
+      logLine(`Saved ${base}.zip — ${mp3s} track${mp3s>1?'s':''}${withLrc?' + lyrics':''}`, 'ok');
+      toast(withLrc ? 'Saved zip with verses (.lrc) inside' : `Saved ${mp3s} files in one zip`);
+    }
+  }catch(e){
+    e.code = e.code || 'ZIP';
+    logError(e);
+    toast('Could not build the file — try Build again');
+  }
+  if(btn){ btn.disabled=false; btn.textContent='Save as MP3'; }
+}
+
+/* ------------------------------------------------------- drill setup tab */
+const depthVal = () => Math.max(1, +$('sd').value || 1);
+
+// --- surah search ---------------------------------------------------------
+// People type names without harakat and without the "سورة" prefix, and spell
+// the transliteration loosely (rahman / ar-rahmaan). Normalise hard on both
+// sides: strip marks, fold alef/ya/ta-marbuta variants, drop the al-/ar-
+// article, then squeeze doubled letters. Numbers match the surah number.
+// Normalise one word: drop article, fold loose long vowels, squeeze doubles.
+const normWord = w => { let x=w.toLowerCase().replace(/[^a-z0-9]/g,'');
+  x=x.replace(/^a[lr]/,'');
+  x=x.replace(/oo/g,'u').replace(/ee/g,'i').replace(/ou/g,'u');
+  return x.replace(/(.)\1+/g,'$1'); };
+// A whole query normalises as a single token (users type one word).
+const squeezeEn = s => normWord(s);
+// A stored name may be several words ("The Elephant"); normalise each word on
+// its own, THEN join — folding across the join would eat letters ("theelephant"
+// -> "thilephant"), losing "elephant".
+const indexEn = s => s.split(/[\s-]+/).map(normWord).join(' ');
+const normAr = s => s
+  .replace(/[\u064B-\u065F\u0670\u0640\u06D6-\u06ED]/g,'')          // harakat, tatweel, small marks
+  .replace(/[\u0622\u0623\u0625\u0671]/g,'\u0627')                  // alef variants -> bare alef
+  .replace(/\u0629/g,'\u0647').replace(/\u0649/g,'\u064A')          // ta marbuta -> ha, maksura -> ya
+  .replace(/\u0624/g,'\u0648').replace(/\u0626/g,'\u064A')          // hamza seats
+  .replace(/^\s*سور[ةه]\s*/,'').replace(/^ال/,'')                   // drop "surah" prefix + article
+  .replace(/\s+/g,'').trim();
+let SIDX = [];
+function buildSearchIndex(){
+  SIDX = SURAHS.map(s=>({n:s.n, ar:normAr(s.ar), en:indexEn(s.en)+' '+indexEn(s.tr||'')}));
+}
+function searchSurah(q){
+  q=(q||'').trim(); if(!q) return SURAHS.map(s=>s.n);
+  if(/^\d+$/.test(q)){ const n=+q; return SURAHS.filter(s=>String(s.n).startsWith(q)||s.n===n).map(s=>s.n); }
+  const hasLatin=/[a-z]/i.test(q);
+  if(hasLatin){ const n=squeezeEn(q);
+    // match within any single word, or across the whole name with spaces removed
+    return SIDX.filter(x=> x.en.includes(n) || x.en.replace(/ /g,'').includes(n)).map(x=>x.n); }
+  const n=normAr(q); return SIDX.filter(x=>x.ar.includes(n)).map(x=>x.n);
+}
+function fillSurahSelect(sel){
+  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${s.ar}</option>`).join('');
+}
+// Narrow the dropdown to matches; auto-select when exactly one remains.
+async function applyFilter(){
+  const q = $('sfilter').value;
+  const hits = searchSurah(q);
+  const set = new Set(hits);
+  const keep = SURAHS.filter(s=>set.has(s.n));
+  $('surah').innerHTML = (keep.length?keep:SURAHS)
+    .map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${s.ar}</option>`).join('');
+  const h=$('sfhint');
+  if(!q.trim()){ h.hidden=true; }
+  else { h.hidden=false;
+    h.textContent = hits.length===0 ? 'No match — showing all' :
+                    hits.length===1 ? '1 match' : `${hits.length} matches`; }
+  if(hits.length>=1){
+    $('surah').value = hits[0];
+    const s=SURAHS.find(x=>x.n===hits[0]);
+    fillAyat($('surah'),$('from'),$('to'),1,Math.min(7,s.count));
+    sync(); try{ await loadSurah(hits[0]); }catch(e){} budget();
+  }
+}
+function fillAyat(surahSel, fromSel, toSel, f, t){
+  const s = SURAHS.find(x=>x.n===+surahSel.value); if(!s) return;
+  const o = Array.from({length:s.count},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+  fromSel.innerHTML=o; toSel.innerHTML=o;
+  fromSel.value = Math.min(Math.max(1,f||1), s.count);
+  toSel.value   = Math.min(Math.max(1,t||1), s.count);
+}
+function sync(){
+  let f=+$('from').value, t=+$('to').value;
+  if(t<f){ t=f; $('to').value=t; }
+  const n = t-f+1;
+  $('sd').max = Math.max(1,n-1);          // clamps the input first…
+  const depth = depthVal();               // …so this reads the clamped value
+  $('sdlbl').textContent = depth >= n-1 ? 'all previous' : `last ${depth}`;
+  Object.assign(S,{from:f,to:t,surah:+$('surah').value,rep:+$('rep').value,rng:+$('rng').value,sd:depth});
+  saveS(); budget();
+}
+function budget(){
+  const b=$('budget'), m=$('bmain'), note=$('bnote');
+  const n = S.to-S.from+1;
+  const plays = countQueue(S.from,S.to,S.rep,S.rng,depthVal());
+  const A = TEXT[S.surah];
+  const tips = [];
+  if(n > 10) tips.push('Most people memorize 5–10 ayat at a time.');
+  if(!A || A.length < S.to){
+    m.textContent = `${n} ayah${n>1?'s':''} · ${plays} plays`;
+    note.textContent = tips.concat('Size appears once the text loads.').join(' ');
+    b.className='readout'; $('go').disabled=false; return;
+  }
+  const d=[]; for(let i=S.from;i<=S.to;i++) d[i]=estAyah(A[i-1].text,S.surah,i);
+  const q = buildQueue(S.from,S.to,S.rep,S.rng,depthVal());
+  let secs=0;
+  q.forEach((st,i)=>{ secs+=d[st.a]; if(i<q.length-1) secs += drillGap(d[st.a]); });
+  const mb = toMB(secs);
+  m.textContent = `${n} ayah${n>1?'s':''} · ${plays} plays · ≈ ${mmss(secs)} · ≈ ${mb.toFixed(0)} MB`;
+  if(mb > MAX_MB){
+    b.className='readout bad'; $('go').disabled=true;
+    note.textContent = `Too long. Reduce the range, the rounds, or the stack depth. Limit is ${MAX_MB} MB.`;
+  } else if(mb > WARN_MB){
+    b.className='readout warn'; $('go').disabled=false;
+    tips.push(`Long — plays in ${Math.ceil(mb/PART_MB)} parts. Audio may stop at a part boundary if the screen is locked.`);
+    note.textContent = tips.join(' ');
+  } else {
+    b.className='readout ok'; $('go').disabled=false;
+    tips.push('Plays as one track — safe to lock the screen.');
+    note.textContent = tips.join(' ');
+  }
+}
+// Show the ayat with no audio and no download — so a range can be checked and
+// refined before committing to a stitch. Text is tiny and usually cached.
+async function preview(){
+  const n=+$('surah').value, f=+$('from').value, t=+$('to').value;
+  const btn=$('preview'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    await loadSurah(n);
+    if(el) el.pause();
+    SEG=[]; PARTS=[]; TOTAL=0; segI=-1;      // drop any stale player state
+    MODE='drill';
+    VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
+    renderView();
+    $('bar').hidden=true; $('exprow').hidden=true;   // no transport until a real build
+    $('logwrap').hidden=true;                        // nothing downloaded in preview
+    tab('drl');
+    toast('Preview — check the range, then Start drill');
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load the text' : 'Offline — this surah is not saved yet');
+  }
+  btn.disabled=false; btn.textContent='Show text';
+}
+async function begin(){
+  const n=+$('surah').value, f=+$('from').value, t=+$('to').value;
+  $('go').disabled=true; $('go').textContent='Preparing…';
+  MODE='drill'; tab('drl'); prepStart(); clearLog();
+  const plays = countQueue(f,t,+$('rep').value,+$('rng').value,depthVal());
+  logLine(`Starting drill — ${sName(n)} ${f}–${t}`, 'in');
+  try{
+    logLine('Reading text…', 'in');
+    await loadSurah(n);
+    logLine('Text ready', 'ok');
+    VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
+    renderView();
+    LABEL = `${sName(n)} ${f}-${t} drill ${S.rep}x${S.rng}`;
+    ensureEl();   // create the audio element now; do NOT await a source-less
+                  // play() here — on some Android browsers that promise never
+                  // settles until the next screen tap, which freezes the whole
+                  // prepare. startOrArm() below handles starting playback.
+
+    const q = buildQueue(f,t,+$('rep').value,+$('rng').value,depthVal());
+    const items = q.map(x=>({s:n, a:x.a, meta:x}));
+    const uniq = new Set(items.map(x=>x.s+':'+x.a)).size;
+    logLine(`Gathering ${uniq} ayah file${uniq>1?'s':''} for ${plays} plays`, 'in');
+    DL = {cache:0, net:0};
+    const r = await stitch(items, d => drillGap(d)*1000, prog);
+    logProgDone(`Audio ready — ${DL.cache} saved, ${DL.net} downloaded`);
+    logLine('Stitching into one track…', 'in');
+    $('pos').textContent='Stitching…';
+    PARTS=r.parts; SEG=r.seg; TOTAL=r.total; prepEnd();
+    const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+    logLine(`Built ${mmss(TOTAL)} · ${mb.toFixed(1)} MB · ${PARTS.length} part${PARTS.length>1?'s':''}`, 'ok');
+    loadPart(0); media(); segI=-1; tick(); showExport();
+    // Preparation is done and successful. Starting the audio is a SEPARATE
+    // step that can be blocked: on mobile the browser only allows play() for a
+    // few seconds after a tap, and a long download outlives that window. So if
+    // play() is refused, show a clean ready state — not an error — and let the
+    // Play button (a fresh tap) start it.
+    await startOrArm();
+  }catch(e){
+    prepEnd(); $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
+    logError(e);
+    toast(navigator.onLine ? (e.message||'Could not prepare') : 'Offline — this range is not downloaded');
+  }
+  $('go').disabled=false; $('go').textContent='Start drill';
+}
+// Try to begin playback; if the browser blocks it, arm a tap-to-play state.
+async function startOrArm(){
+  try{
+    await el.play();
+    logLine('Playing ▶', 'ok');
+    if(PARTS.length>1) toast(`Ready — playing in ${PARTS.length} parts`);
+  }catch(e){
+    segI=-1; tick();                       // show the first ayah, paused at 0:00
+    $('phase').textContent='Ready'; $('phase').className='';
+    $('pos').textContent=`Tap Play to begin · ${mmss(TOTAL)}`;
+    $('play').textContent='Play';
+    logLine('Ready — tap Play to begin', 'ok');
+    toast('Ready — tap Play to begin');
+  }
+}
+
+/* -------------------------------------------------------------- stitch tab */
+const blockAyat = b => b.to - b.from + 1;
+function stitchItems(){
+  const items = []; let last = null;
+  BLOCKS.forEach(b=>{
+    // Bismillah opens every new surah. Never for 9 (it has none); never before
+    // 1:1, which IS the Bismillah already.
+    if(b.surah !== last && b.surah !== 9 && !(b.surah===1 && b.from===1))
+      items.push({s:1, a:1, meta:{k:'listen', bism:true}});
+    for(let i=b.from;i<=b.to;i++) items.push({s:b.surah, a:i, meta:{k:'listen'}});
+    last = b.surah;
+  });
+  return items;
+}
+function stitchView(){
+  const v = [];
+  BLOCKS.forEach(b=>{ for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i}); });
+  return v;
+}
+function renderBlocks(){
+  const box = $('blocks');
+  if(!BLOCKS.length){
+    box.innerHTML = `<div class="empty">No blocks yet. Choose a surah and range above, then Add block.</div>`;
+  } else {
+    box.innerHTML='';
+    BLOCKS.forEach((b,i)=>{
+      const d = document.createElement('div'); d.className='card';
+      d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat</small></div><button class="x">×</button>`;
+      d.querySelector('b').textContent = `${i+1}. ${sName(b.surah)} ${b.from}–${b.to}`;
+      d.querySelector('.x').onclick = ()=>{ BLOCKS.splice(i,1); saveB(); renderBlocks(); };
+      box.appendChild(d);
+    });
+  }
+  sreadout();
+}
+function sreadout(){
+  const m=$('smain'), note=$('snote'), r=$('sreadout');
+  const on = v => { $('sbuild').disabled=!v; $('sexp').disabled=!v; };
+  if(!BLOCKS.length){ m.textContent='No blocks yet'; note.textContent=''; r.className='readout'; on(false); return; }
+  const ayat = BLOCKS.reduce((a,b)=>a+blockAyat(b),0);
+  let secs=0, known=true;
+  BLOCKS.forEach(b=>{
+    const A = TEXT[b.surah];
+    if(!A){ known=false; return; }
+    for(let i=b.from;i<=b.to;i++) secs += estAyah(A[i-1].text, b.surah, i) + stitchGap();
+  });
+  if(!known){
+    m.textContent = `${BLOCKS.length} block${BLOCKS.length>1?'s':''} · ${ayat} ayat`;
+    note.textContent = 'Size appears once every surah\u2019s text has loaded.';
+    r.className='readout'; on(true); return;
+  }
+  const mb = toMB(secs);
+  m.textContent = `${BLOCKS.length} block${BLOCKS.length>1?'s':''} · ${ayat} ayat · ≈ ${mmss(secs)} · ≈ ${mb.toFixed(0)} MB`;
+  if(mb > MAX_MB){ r.className='readout bad'; on(false);
+    note.textContent = `Too long — limit is ${MAX_MB} MB. Remove a block.`; }
+  else if(mb > WARN_MB){ r.className='readout warn'; on(true);
+    note.textContent = `Long — saves as a zip of ${Math.ceil(mb/PART_MB)} files, and playback may pause at a part boundary if the screen is locked.`; }
+  else { r.className='readout ok'; on(true);
+    note.textContent = 'Plays as one track — safe to lock the screen.'; }
+}
+async function addBlock(){
+  const b = {surah:+$('ssurah').value, from:+$('sfrom').value, to:+$('sto').value};
+  if(b.to < b.from) b.to = b.from;
+  BLOCKS.push(b); saveB(); renderBlocks();
+  try{ await loadSurah(b.surah); }catch(e){}
+  renderBlocks();
+  toast(`Added ${sName(b.surah)} ${b.from}–${b.to}`);
+}
+async function buildStitch(andPlay){
+  if(!BLOCKS.length) return;
+  MODE='stitch';
+  const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
+  LABEL = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
+  $('sbuild').disabled=true; $('sexp').disabled=true;
+  tab('drl'); prepStart(); clearLog();
+  logLine(`Building track — ${BLOCKS.length} block${BLOCKS.length>1?'s':''}`, 'in');
+  try{
+    logLine('Reading text…', 'in');
+    for(const b of BLOCKS) await loadSurah(b.surah);
+    logLine('Text ready', 'ok');
+    VIEW = stitchView(); renderView();
+    ensureEl();   // see note in begin() — never await a source-less play()
+    const items = stitchItems();
+    const uniq = new Set(items.map(x=>x.s+':'+x.a)).size;
+    logLine(`Gathering ${uniq} ayah file${uniq>1?'s':''}`, 'in');
+    DL = {cache:0, net:0};
+    const gap = stitchGap() * 1000;
+    const r = await stitch(items, ()=>gap, prog);
+    logProgDone(`Audio ready — ${DL.cache} saved, ${DL.net} downloaded`);
+    logLine('Stitching into one track…', 'in');
+    $('pos').textContent='Stitching…';
+    PARTS=r.parts; SEG=r.seg; TOTAL=r.total; prepEnd();
+    const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+    logLine(`Built ${mmss(TOTAL)} · ${mb.toFixed(1)} MB · ${PARTS.length} part${PARTS.length>1?'s':''}`, 'ok');
+    loadPart(0); media(); segI=-1; tick(); showExport();
+    if(andPlay) await startOrArm();
+    else { exportAudio(); logLine('Saving file…', 'ok'); }
+  }catch(e){
+    prepEnd(); $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
+    logError(e);
+    toast(navigator.onLine ? (e.message||'Could not build') : 'Offline — these ayat are not downloaded');
+  }
+  sreadout();
+}
+
+/* ---------------------------------------------------------- saved / backup */
+function renderLists(){
+  const box=$('lists');
+  if(!LISTS.length){ box.innerHTML=`<div class="empty">No saved ranges yet.</div>`; return; }
+  box.innerHTML='';
+  LISTS.forEach((l,i)=>{
+    const d=document.createElement('div'); d.className='card';
+    d.innerHTML=`<div class="g"><b></b><small>${sName(l.surah)} ${l.from}–${l.to} · ${l.rep}× each · ${l.rng}× range</small></div><button class="x">×</button>`;
+    d.querySelector('b').textContent=l.name;
+    d.querySelector('.g').onclick = async ()=>{
+      $('surah').value=l.surah; fillAyat($('surah'),$('from'),$('to'),l.from,l.to);
+      $('rep').value=l.rep; $('rng').value=l.rng; $('sd').value=l.sd||20;
+      sync(); try{ await loadSurah(l.surah); }catch(e){} budget();
+      tab('sel'); toast(`Loaded “${l.name}”`);
+    };
+    d.querySelector('.x').onclick = e =>{ e.stopPropagation();
+      if(!confirm(`Delete “${l.name}”?`)) return; LISTS.splice(i,1); saveL(); renderLists(); };
+    box.appendChild(d);
+  });
+}
+function renderRecipes(){
+  const box=$('recipes');
+  if(!RECIPES.length){ box.innerHTML=`<div class="empty">No stitch recipes yet.</div>`; return; }
+  box.innerHTML='';
+  RECIPES.forEach((rc,i)=>{
+    const ayat = rc.blocks.reduce((a,b)=>a+blockAyat(b),0);
+    const d=document.createElement('div'); d.className='card';
+    d.innerHTML=`<div class="g"><b></b><small>${rc.blocks.length} block${rc.blocks.length>1?'s':''} · ${ayat} ayat</small></div><button class="x">×</button>`;
+    d.querySelector('b').textContent=rc.name;
+    d.querySelector('.g').onclick = async ()=>{
+      BLOCKS = rc.blocks.map(b=>Object.assign({},b)); saveB(); renderBlocks();
+      for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
+      renderBlocks(); tab('stc'); toast(`Loaded “${rc.name}”`);
+    };
+    d.querySelector('.x').onclick = e =>{ e.stopPropagation();
+      if(!confirm(`Delete “${rc.name}”?`)) return; RECIPES.splice(i,1); saveR(); renderRecipes(); };
+    box.appendChild(d);
+  });
+}
+function saveRange(){
+  const name=(prompt('Name this range:', `${sName(+$('surah').value)} ${$('from').value}–${$('to').value}`)||'').trim();
+  if(!name) return;
+  LISTS.push({name, surah:+$('surah').value, from:+$('from').value, to:+$('to').value,
+              rep:+$('rep').value, rng:+$('rng').value, sd:+$('sd').value});
+  saveL(); toast(`Saved “${name}”`);
+}
+function saveRecipe(){
+  if(!BLOCKS.length) return toast('Add some blocks first');
+  const name=(prompt('Name this recipe:', 'Morning revision')||'').trim();
+  if(!name) return;
+  RECIPES.push({name, blocks:BLOCKS.map(b=>Object.assign({},b))}); saveR();
+  toast(`Saved “${name}”`);
+}
+function exportBackup(){
+  saveBlob(new Blob([JSON.stringify({app:'hifz', v:3, exported:new Date().toISOString(),
+    settings:S, lists:LISTS, recipes:RECIPES, blocks:BLOCKS}, null, 2)],{type:'application/json'}),
+    `hifz-backup-${new Date().toISOString().slice(0,10)}.json`);
+  toast('Backup saved. Keep it somewhere safe.');
+}
+function importBackup(file){
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const d = JSON.parse(rd.result);
+      const inc = Array.isArray(d) ? {lists:d} : d;
+      if(!inc || typeof inc !== 'object') throw 0;
+      let n = 0;
+      if(Array.isArray(inc.lists)){
+        const seen = new Set(LISTS.map(l=>l.name+l.surah+l.from+l.to));
+        inc.lists.forEach(l=>{ if(typeof l.surah!=='number') return;
+          const k=l.name+l.surah+l.from+l.to; if(seen.has(k)) return;
+          seen.add(k); LISTS.push(l); n++; });
+        saveL();
+      }
+      if(Array.isArray(inc.recipes)){
+        const seen = new Set(RECIPES.map(x=>x.name));
+        inc.recipes.forEach(x=>{ if(!Array.isArray(x.blocks) || seen.has(x.name)) return;
+          seen.add(x.name); RECIPES.push(x); n++; });
+        saveR();
+      }
+      if(Array.isArray(inc.blocks)){ BLOCKS = inc.blocks; saveB(); }
+      if(inc.settings && typeof inc.settings==='object'){ S = Object.assign({}, DEF, inc.settings); saveS(); }
+      renderLists(); renderRecipes(); renderBlocks(); applySettings(); budget();
+      toast(n ? `Imported ${n} item${n>1?'s':''}` : 'Backup restored');
+    }catch(e){ toast("That file isn't a Hifz backup"); }
+  };
+  rd.readAsText(file);
+}
+async function resetAll(){
+  if(!confirm('Reset everything?\n\nThis wipes downloaded audio, cached text, saved ranges, recipes and settings.\n\nExport a backup first if you want to keep them.')) return;
+  if(!confirm('Last chance — this cannot be undone. Continue?')) return;
+  try{ await DB.clear('audio'); }catch(e){}
+  try{ await DB.clear('text');  }catch(e){}
+  try{ Object.keys(localStorage).filter(k=>k.indexOf('hifz.')===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  location.reload();
+}
+async function cacheInfo(){
+  try{
+    const k = await DB.keys('audio');
+    const mine = k.filter(x=>String(x).indexOf(S.qari)===0);
+    let q = '';
+    if(navigator.storage && navigator.storage.estimate){
+      try{ const e = await navigator.storage.estimate();
+           q = ` · ${(e.usage/1048576).toFixed(1)} MB used`; }catch(e){}
+    }
+    $('cinfo').textContent = `${mine.length} ayah${mine.length===1?'':'s'} for this reciter · ${k.length} in total${q}. Audio is kept automatically as you play.`;
+  }catch(e){ $('cinfo').textContent = 'Storage unavailable — see Diagnostics below.'; }
+}
+
+/* ------------------------------------------------------------ diagnostics */
+async function diagnose(){
+  const box=$('diag'); box.innerHTML='';
+  const add=(st,label,detail)=>{
+    const d=document.createElement('div'); d.className='diag';
+    d.innerHTML=`<i class="${st}">${st==='ok'?'✓':st==='no'?'✗':'!'}</i><div><b></b><small></small></div>`;
+    d.querySelector('b').textContent=label; d.querySelector('small').textContent=detail||'';
+    box.appendChild(d);
+  };
+  const sec = window.isSecureContext;
+  add(sec?'ok':'no','Secure context',
+      sec ? location.protocol+'//' : `${location.protocol}// — the checks below are likely blocked because of this. Serving this same file over https:// fixes it.`);
+  if(!('wakeLock' in navigator)) add('no','Keep screen awake','Not supported by this browser.');
+  else { try{ const w=await navigator.wakeLock.request('screen'); await w.release();
+               add('ok','Keep screen awake','Works.'); }
+         catch(e){ add('no','Keep screen awake',(e.name||'Blocked')+' — usually because the page is not on https://'); } }
+  try{ await DB.probe(); add('ok','Offline storage','Working — downloads persist between sessions.'); }
+  catch(e){ add('no','Offline storage','Blocked. Every session re-downloads, and the cache buttons do nothing.'); }
+  add('mediaSession' in navigator?'ok':'mb','Lock-screen controls',
+      'mediaSession' in navigator ? 'Available.' : 'Not available.');
+  const mp3 = document.createElement('audio').canPlayType('audio/mpeg');
+  add(mp3?'ok':'no','MP3 playback', mp3 ? 'Supported ('+mp3+').' : 'Not supported.');
+  if(navigator.storage && navigator.storage.estimate){
+    try{ const q=await navigator.storage.estimate();
+      add('ok','Storage quota', `${(q.usage/1048576).toFixed(1)} MB used of ${(q.quota/1048576).toFixed(0)} MB.`);
+    }catch(e){ add('mb','Storage quota','Unknown.'); }
+  } else add('mb','Storage quota','Cannot be measured here.');
+  add('mb','Browser', navigator.userAgent);
+}
+
+/* ----------------------------------------------------------------- wiring */
+function tab(id){
+  document.querySelectorAll('nav button').forEach(b=> b.setAttribute('aria-selected', String(b.dataset.tab===id)));
+  ['sel','drl','stc','sav','set'].forEach(t=> $('p-'+t).hidden = (t!==id));
+  if(id==='sav'){ renderLists(); renderRecipes(); }
+  if(id==='stc') renderBlocks();
+  if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
+  document.querySelector('main').scrollTop = 0;
+}
+function toggle(node, key, after){
+  node.onclick = ()=>{ S[key]=!S[key]; node.setAttribute('aria-checked',String(S[key])); saveS(); after&&after(); };
+}
+function paintGapModes(){
+  document.querySelectorAll('#gapmode button').forEach(b=>
+    b.setAttribute('aria-checked', String(b.dataset.v===S.gapmode)));
+  document.querySelectorAll('#sgapmode button').forEach(b=>
+    b.setAttribute('aria-checked', String(b.dataset.v===S.sgapmode)));
+  $('gapwrap').style.display  = S.gapmode==='fixed'  ? '' : 'none';
+  $('sgapwrap').style.display = S.sgapmode==='fixed' ? '' : 'none';
+  $('gaphint').textContent =
+    S.gapmode==='none'  ? 'Ayat follow on with no pause.' :
+    S.gapmode==='echo'  ? 'After each ayah, a silence as long as it — recite it back before the next.' :
+                          'A fixed pause after each ayah.';
+}
+function applySettings(){
+  $('qari').value = S.qari;
+  $('gap').value = S.gap;  $('gaplbl').textContent=(+S.gap).toFixed(1)+'s';
+  $('asz').value = S.asz;  $('aszlbl').textContent=S.asz+'px';
+  $('uisz').value = S.uisz; $('uiszlbl').textContent=S.uisz+'px';
+  document.documentElement.style.setProperty('--uisz', S.uisz+'px');
+  $('sgap').value = S.sgap; $('sgaplbl').textContent=(+S.sgap).toFixed(1)+'s';
+  $('rep').value = S.rep; $('rng').value = S.rng; $('sd').value = S.sd;
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+  ['hl','veil','bism','wake','lyrics'].forEach(k=>{
+    const n=$('t-'+k); if(n) n.setAttribute('aria-checked', String(!!S[k])); });
+  paintGapModes();
+}
+function boot(){
+  document.querySelectorAll('nav button').forEach(b=> b.onclick = ()=>tab(b.dataset.tab));
+  document.querySelectorAll('[data-step]').forEach(b=> b.onclick = ()=>{
+    const i=$(b.dataset.t);
+    i.value = Math.max(+i.min, Math.min(+i.max, +i.value + (+b.dataset.step))); sync(); });
+  $('rep').oninput=sync; $('rng').oninput=sync; $('sd').oninput=sync;
+  $('from').onchange=sync; $('to').onchange=sync;
+  $('surah').onchange = async ()=>{
+    const s=SURAHS.find(x=>x.n===+$('surah').value);
+    fillAyat($('surah'),$('from'),$('to'),1,Math.min(7,s.count));
+    sync(); try{ await loadSurah(+$('surah').value); }catch(e){} budget();
+  };
+  let ftimer;
+  $('sfilter').oninput = ()=>{ clearTimeout(ftimer); ftimer=setTimeout(applyFilter,140); };
+  $('sfilter').onsearch = applyFilter;   // fires on the clear (×) button too
+  $('sfilter').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('sfilter').blur(); } });
+  $('preview').onclick = preview;
+  $('go').onclick=begin; $('save').onclick=saveRange;
+
+  $('play').onclick = ()=>{
+    if(preparing) return;
+    if(!PARTS.length) return toast('Build something first');
+    if(el && !el.paused) el.pause(); else ensureEl().play().catch(()=>toast('Tap once more to allow audio'));
+  };
+  $('stop').onclick=stop; $('prev').onclick=()=>jump(-1); $('next').onclick=()=>jump(1);
+  $('prog').onclick = e =>{ if(!TOTAL) return;
+    const r=e.currentTarget.getBoundingClientRect();
+    seekTo(((e.clientX-r.left)/r.width)*TOTAL); };
+  $('expmp3').onclick = exportAudio;
+  $('logcopy').onclick = ()=>{
+    const text = logRows.join('\n') + `\nHifz ${VERSION} · ${BUILD}\n${navigator.userAgent}`;
+    const done = ()=>toast('Activity log copied');
+    if(navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
+    else fallbackCopy(text, done);
+  };
+
+  // stitch
+  $('ssurah').onchange = async ()=>{
+    const s=SURAHS.find(x=>x.n===+$('ssurah').value);
+    fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,s.count));
+    try{ await loadSurah(+$('ssurah').value); }catch(e){} sreadout();
+  };
+  $('sfrom').onchange = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sto').value=$('sfrom').value; };
+  $('sto').onchange   = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sfrom').value=$('sto').value; };
+  $('sadd').onclick   = addBlock;
+  $('sbuild').onclick = ()=>buildStitch(true);
+  $('sexp').onclick   = ()=>buildStitch(false);
+  $('srecipe').onclick= saveRecipe;
+  $('sclearb').onclick= ()=>{ if(!BLOCKS.length) return;
+    if(!confirm('Remove all blocks?')) return; BLOCKS=[]; saveB(); renderBlocks(); };
+  $('sgap').oninput = ()=>{ S.sgap=+$('sgap').value; $('sgaplbl').textContent=S.sgap.toFixed(1)+'s';
+    saveS(); sreadout(); };
+
+  // settings
+  $('qari').innerHTML = RECITERS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+  const qh = ()=> $('qhint').textContent = bps()===192
+    ? 'Abdul Basit is 192 kbps — files run about 50% larger than the others, roughly 1.5 MB per minute.'
+    : 'Roughly 1 MB per minute at 128 kbps.';
+  $('qari').onchange = ()=>{ S.qari=$('qari').value; saveS(); qh(); budget(); sreadout(); cacheInfo(); toast('Reciter changed'); };
+  $('gap').oninput = ()=>{ S.gap=+$('gap').value; $('gaplbl').textContent=S.gap.toFixed(1)+'s'; saveS(); budget(); };
+  $('asz').oninput = ()=>{ S.asz=+$('asz').value; $('aszlbl').textContent=S.asz+'px';
+    document.documentElement.style.setProperty('--asz',S.asz+'px'); saveS(); };
+  $('uisz').oninput = ()=>{ S.uisz=+$('uisz').value; $('uiszlbl').textContent=S.uisz+'px';
+    document.documentElement.style.setProperty('--uisz',S.uisz+'px'); saveS(); };
+  document.querySelectorAll('#gapmode button').forEach(b=> b.onclick = ()=>{
+    S.gapmode=b.dataset.v; saveS(); paintGapModes(); budget(); });
+  document.querySelectorAll('#sgapmode button').forEach(b=> b.onclick = ()=>{
+    S.sgapmode=b.dataset.v; saveS(); paintGapModes(); sreadout(); });
+  toggle($('t-hl'),'hl',    ()=> paint(SEG[segI]||null));
+  toggle($('t-veil'),'veil',()=> paint(SEG[segI]||null));
+  toggle($('t-bism'),'bism',budget);
+  toggle($('t-wake'),'wake',()=>{ if(!S.wake) relWake(); else if(el&&!el.paused) reqWake(); });
+  toggle($('t-lyrics'),'lyrics');
+
+  $('exp').onclick = exportBackup;
+  $('imp').onclick = ()=> $('impf').click();
+  $('impf').onchange = e =>{ if(e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
+  $('clra').onclick = async ()=>{ if(!confirm('Delete downloaded audio? Text and settings stay.')) return;
+    try{ await DB.clear('audio'); toast('Audio cleared'); }catch(e){ toast('Storage unavailable'); }
+    cacheInfo(); };
+  $('reset').onclick = resetAll;
+  $('rediag').onclick = diagnose;
+
+  $('ver').textContent = `Hifz ${VERSION} · built ${BUILD}`;
+  qh();
+  const net = ()=> $('netdot').classList.toggle('off', !navigator.onLine);
+  addEventListener('online',net); addEventListener('offline',net); net();
+}
+
+(async function init(){
+  SIL = {128:b64ToU8(SIL_B64[128]), 192:b64ToU8(SIL_B64[192])};
+  boot(); applySettings();
+  try{
+    await loadSurahs(); await loadBismillah();
+    $('aszdemo').textContent = BISM;
+    fillSurahSelect($('surah')); fillSurahSelect($('ssurah'));
+    $('surah').value = S.surah;
+    fillAyat($('surah'),$('from'),$('to'),S.from,S.to);
+    $('ssurah').value = S.surah;
+    const cs = (SURAHS.find(x=>x.n===S.surah)||{count:7}).count;
+    fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,cs));
+    sync();
+    try{ await loadSurah(S.surah); }catch(e){}
+    for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
+    budget(); renderBlocks();
+  }catch(e){
+    $('surah').innerHTML = '<option>Could not load</option>';
+    $('bnote').textContent = 'Could not reach the text source. Connect once, then it works offline.';
+  }
+})();
+</script>
+</body>
+</html>
