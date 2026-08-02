@@ -3,146 +3,236 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0B1418">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hifz">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Hifz — Stacked Memorizer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#0B1418; --ink-2:#122029; --ink-3:#1B303B; --line:#25404C;
-  --parchment:#E8E2D2; --muted:#7E9099;
-  --jade:#2AA17E; --gold:#C9A227; --red:#B4534A; --amber:#D08A2C;
-  --pad:16px;
+  /* Light Material palette. Names kept from the old theme so existing rules
+     re-colour automatically; only the values changed. */
+  --ink:#F4F2EA;        /* app background (warm off-white) */
+  --ink-2:#FFFFFF;      /* card / input surface */
+  --ink-3:#ECEAE0;      /* raised / filled control */
+  --line:#E2DFD4;       /* hairlines / borders */
+  --parchment:#1C2A2A;  /* primary text (dark) */
+  --muted:#63706F;      /* secondary text */
+  --jade:#1E8A6A; --jade-soft:rgba(30,138,106,.12);
+  --gold:#9A7B12; --gold-soft:rgba(154,123,18,.14);
+  --red:#C0392B; --red-soft:rgba(192,57,43,.10);
+  --amber:#B9761C;
+  --shadow:0 1px 3px rgba(20,40,40,.10),0 1px 2px rgba(20,40,40,.06);
+  --shadow-lift:0 4px 14px rgba(20,40,40,.12);
+  --pad:16px; --navh:64px;
   --arabic:'Amiri Quran','Traditional Arabic','Scheherazade New',serif;
   --ui:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%}
-body{background:var(--ink);color:var(--parchment);font-family:var(--ui);font-size:var(--uisz,17px);line-height:1.5;
+body{background:var(--ink);color:var(--parchment);font-family:var(--ui);font-size:var(--uisz,19px);line-height:1.5;
   display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);overscroll-behavior-y:none}
 button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
 input,select{font-family:inherit;font-size:inherit}
-header{display:flex;align-items:center;gap:10px;padding:10px var(--pad);border-bottom:1px solid var(--line);flex:none}
-.brand{font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:.7em;color:var(--muted)}
+
+/* ---- top app bar (branding kept) ---- */
+header{display:flex;align-items:center;gap:10px;padding:14px var(--pad);flex:none;background:var(--ink-2);
+  border-bottom:1px solid var(--line)}
+.brand{font-weight:700;letter-spacing:.02em;font-size:1em;color:var(--parchment)}
 .brand b{color:var(--jade)}
-#netdot{width:7px;height:7px;border-radius:50%;background:var(--jade);margin-left:auto;flex:none}
+.brand small{display:block;font-size:.6em;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:1px}
+#netdot{width:8px;height:8px;border-radius:50%;background:var(--jade);margin-left:auto;flex:none}
 #netdot.off{background:var(--red)}
-nav{display:flex;border-bottom:1px solid var(--line);flex:none}
-nav button{flex:1;padding:13px 2px;font-size:.68em;letter-spacing:.04em;text-transform:uppercase;
-  color:var(--muted);border-bottom:2px solid transparent;font-weight:600}
-nav button[aria-selected="true"]{color:var(--parchment);border-bottom-color:var(--jade)}
-main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--pad);padding-bottom:130px}
+
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--pad);
+  padding-bottom:calc(var(--navh) + 155px)}
 .panel[hidden]{display:none}
-.field{margin-bottom:16px}
-.lbl{display:block;font-size:.76em;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600}
-.ctl{width:100%;padding:12px;background:var(--ink-2);border:1px solid var(--line);border-radius:10px;color:var(--parchment);appearance:none}
+.field{margin-bottom:18px}
+.lbl{display:block;font-size:.78em;letter-spacing:.02em;color:var(--muted);margin-bottom:8px;font-weight:600}
+.ctl{width:100%;padding:14px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;
+  color:var(--parchment);appearance:none;box-shadow:var(--shadow)}
+.ctl:focus{outline:none;border-color:var(--jade);box-shadow:0 0 0 3px var(--jade-soft)}
 .row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
-.btn{padding:13px;border-radius:10px;background:var(--ink-3);border:1px solid var(--line);text-align:center;font-weight:600}
-.btn:active{transform:scale(.98)}
-.btn.pri{background:var(--jade);border-color:var(--jade);color:#04120D}
-.btn.dgr{color:var(--red);border-color:#40282a}
-.btn[disabled]{opacity:.45}
-input[type=range]{width:100%;accent-color:var(--jade);height:34px}
-.stepper{display:flex;border:1px solid var(--line);border-radius:10px;background:var(--ink-2);overflow:hidden}
-.stepper button{width:2.9em;height:2.9em;min-width:46px;min-height:46px;font-size:1.3em;color:var(--jade);flex:none}
-.stepper input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:600;font-size:1.1em;padding:0}
-.hint{font-size:.84em;color:var(--muted);margin-top:6px;line-height:1.5}
-.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--ink-3)}
-.sw:last-child{border-bottom:none}.sw p{margin:0;font-size:.84em;color:var(--muted)}
-.tog{width:46px;height:27px;border-radius:14px;background:var(--ink-3);border:1px solid var(--line);position:relative;flex:none}
-.tog::after{content:'';position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--muted);transition:transform .15s,background .15s}
-.tog[aria-checked="true"]{background:rgba(42,161,126,.25);border-color:var(--jade)}
-.tog[aria-checked="true"]::after{transform:translateX(19px);background:var(--jade)}
-.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--ink-2)}
-.seg button{flex:1;padding:11px 6px;font-size:.82em;font-weight:600;color:var(--muted);
+
+/* ---- buttons: filled Material feel ---- */
+.btn{padding:15px;border-radius:12px;background:var(--ink-2);border:1px solid var(--line);
+  text-align:center;font-weight:600;box-shadow:var(--shadow);transition:transform .06s}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--jade);border-color:var(--jade);color:#fff;box-shadow:var(--shadow-lift)}
+.btn.dgr{color:var(--red);border-color:var(--red-soft);background:var(--red-soft);box-shadow:none}
+.btn[disabled]{opacity:.5}
+input[type=range]{width:100%;accent-color:var(--jade);height:36px}
+
+.stepper{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--ink-2);overflow:hidden;box-shadow:var(--shadow)}
+.stepper button{width:3em;height:3em;min-width:52px;min-height:52px;font-size:1.4em;color:var(--jade);flex:none;font-weight:600}
+.stepper button:active{background:var(--jade-soft)}
+.stepper input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:700;font-size:1.15em;padding:0}
+.hint{font-size:.85em;color:var(--muted);margin-top:7px;line-height:1.5}
+.sublbl{font-size:.72em;color:var(--muted);margin-bottom:5px;font-weight:600}
+
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.sw:last-child{border-bottom:none}.sw p{margin:2px 0 0;font-size:.85em;color:var(--muted)}
+.sw b{font-weight:600}
+.tog{width:50px;height:30px;border-radius:15px;background:var(--ink-3);border:1px solid var(--line);position:relative;flex:none;transition:background .15s}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:var(--shadow);transition:transform .15s}
+.tog[aria-checked="true"]{background:var(--jade);border-color:var(--jade)}
+.tog[aria-checked="true"]::after{transform:translateX(20px);background:#fff}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--ink-2);box-shadow:var(--shadow)}
+.seg button{flex:1;padding:13px 6px;font-size:.85em;font-weight:600;color:var(--muted);
   border-right:1px solid var(--line);line-height:1.25}
 .seg button:last-child{border-right:none}
-.seg button[aria-checked="true"]{background:rgba(42,161,126,.2);color:var(--jade)}
-h2{font-size:.82em;letter-spacing:.11em;text-transform:uppercase;color:var(--jade);margin:26px 0 10px;font-weight:600}
+.seg button[aria-checked="true"]{background:var(--jade);color:#fff}
+
+h2{font-size:.8em;letter-spacing:.02em;text-transform:uppercase;color:var(--jade);margin:28px 0 12px;font-weight:700}
 h2:first-child{margin-top:0}
-.readout{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--ink-2);margin-bottom:14px}
-.readout b{font-weight:600;font-size:.98em;display:block}
-.readout small{font-size:.84em;color:var(--muted);margin-top:5px;line-height:1.5;display:block}
-.readout.ok b{color:var(--jade)}
+
+.readout{border:1px solid var(--line);border-radius:14px;padding:15px;background:var(--ink-2);margin-bottom:16px;box-shadow:var(--shadow)}
+.readout b{font-weight:700;font-size:1em;display:block}
+.readout small{font-size:.85em;color:var(--muted);margin-top:6px;line-height:1.5;display:block}
+.readout.ok{border-color:var(--jade);background:var(--jade-soft)} .readout.ok b{color:var(--jade)}
 .readout.warn{border-color:var(--amber)} .readout.warn b{color:var(--amber)}
-.readout.bad{border-color:var(--red)} .readout.bad b{color:var(--red)}
-.shead{font-size:.76em;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
-  padding:18px 2px 4px;border-bottom:1px solid var(--ink-3);margin-bottom:4px;font-weight:600}
+.readout.bad{border-color:var(--red);background:var(--red-soft)} .readout.bad b{color:var(--red)}
+
+/* ---- reading pane ---- */
+.shead{font-size:.78em;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);
+  padding:18px 4px 8px;font-weight:700}
 .bismline{font-family:var(--arabic);font-size:calc(var(--asz,34px) * .74);text-align:center;color:var(--gold);
-  padding:10px 0;direction:rtl;line-height:2.2}
-.ayah{direction:rtl;text-align:right;font-family:var(--arabic);padding:14px 12px;border-radius:10px;margin:2px 0;
-  line-height:2.35;transition:background .2s,opacity .2s,filter .25s;border-right:3px solid transparent}
+  padding:12px 0;direction:rtl;line-height:2.2}
+.ayah{direction:rtl;text-align:right;font-family:var(--arabic);padding:16px 14px;border-radius:14px;margin:8px 0;
+  line-height:2.4;transition:background .2s,opacity .2s,filter .25s;background:var(--ink-2);
+  box-shadow:var(--shadow);border:1px solid var(--line);position:relative}
 .ayah .t{font-size:var(--asz,34px)}
-.num{display:inline-flex;align-items:center;justify-content:center;min-width:1.55em;height:1.55em;padding:0 .35em;
-  border-radius:50%;border:1px solid var(--line);font-family:var(--ui);font-size:.68em;font-weight:600;
-  color:var(--muted);margin-left:8px;vertical-align:middle}
-.ayah.cur{background:rgba(42,161,126,.13);border-right-color:var(--jade)}
-.ayah.cur .num{border-color:var(--jade);color:var(--jade)}
-.ayah.stk{background:rgba(201,162,39,.13);border-right-color:var(--gold)}
-.ayah.stk .num{border-color:var(--gold);color:var(--gold)}
-.ayah.veiled{filter:blur(7px);opacity:.35;pointer-events:none}
+.num{display:inline-flex;align-items:center;justify-content:center;min-width:1.7em;height:1.7em;padding:0 .4em;
+  border-radius:50%;background:var(--jade-soft);font-family:var(--ui);font-size:.62em;font-weight:700;
+  color:var(--jade);margin-left:10px;vertical-align:middle}
+.ayah .cpy{position:absolute;bottom:8px;left:8px;font-family:var(--ui);font-size:.5em;color:var(--muted);
+  padding:5px 10px;border-radius:8px;background:var(--ink-3);font-weight:600;direction:ltr}
+.ayah .cpy:active{background:var(--jade);color:#fff}
+.ayah.cur{background:var(--jade-soft);border-color:var(--jade)}
+.ayah.cur .num{background:var(--jade);color:#fff}
+.ayah.stk{background:var(--gold-soft);border-color:var(--gold)}
+.ayah.stk .num{background:var(--gold);color:#fff}
+.ayah.veiled{filter:blur(7px);opacity:.4;pointer-events:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
-#bar{position:fixed;left:0;right:0;bottom:0;background:rgba(11,20,24,.97);backdrop-filter:blur(12px);
-  border-top:1px solid var(--line);padding:10px var(--pad);padding-bottom:calc(10px + env(safe-area-inset-bottom));z-index:20}
+
+/* ---- player sub-view header (back arrow) ---- */
+.subhead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.subhead .back{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;
+  background:var(--ink-2);border:1px solid var(--line);box-shadow:var(--shadow);flex:none}
+.subhead .back:active{background:var(--jade-soft)}
+.subhead .back svg{width:22px;height:22px;stroke:var(--parchment)}
+.subhead h3{margin:0;font-size:1em;font-weight:700}
+.subhead small{display:block;font-size:.72em;color:var(--muted);font-weight:500}
+
+/* ---- transport bar (sits above bottom nav) ---- */
+#bar{position:fixed;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom));
+  background:var(--ink-2);border-top:1px solid var(--line);box-shadow:0 -2px 10px rgba(20,40,40,.06);
+  padding:12px var(--pad);z-index:20}
 #bar[hidden]{display:none}
-#prog{height:3px;background:var(--ink-3);border-radius:2px;overflow:hidden;margin-bottom:9px;cursor:pointer}
+#prog{height:5px;background:var(--ink-3);border-radius:3px;overflow:hidden;margin-bottom:10px;cursor:pointer}
 #progfill{height:100%;width:0;background:var(--jade)}
-#stat{display:flex;justify-content:space-between;align-items:center;font-size:.76em;color:var(--muted);margin-bottom:9px;gap:8px}
-#phase{font-weight:600;letter-spacing:.09em;text-transform:uppercase;flex:none}
+#stat{display:flex;justify-content:space-between;align-items:center;font-size:.78em;color:var(--muted);margin-bottom:10px;gap:8px}
+#phase{font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex:none}
 #pos{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #phase.p-stack{color:var(--gold)} #phase.p-rep{color:var(--jade)}
 #phase.p-round{color:var(--parchment)} #phase.p-listen{color:var(--parchment)} #phase.p-prep{color:var(--amber)}
-.pbtns{display:flex;gap:8px}.pbtns .btn{flex:1}#play{flex:2}
-#prepbar{height:4px;background:var(--ink-3);border-radius:2px;overflow:hidden;margin-bottom:9px}
+.pbtns{display:flex;gap:8px}.pbtns .btn{flex:1;padding:14px}#play{flex:2}
+#prepbar{height:5px;background:var(--ink-3);border-radius:3px;overflow:hidden;margin-bottom:10px}
 #prepbar[hidden]{display:none}
 #prepfill{height:100%;width:0;background:var(--amber);transition:width .2s}
-.card{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:9px;display:flex;align-items:center;gap:12px}
+
+/* ---- cards (saved lists, blocks) ---- */
+.card{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:10px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
 .card .g{flex:1;min-width:0}.card b{display:block;font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card small{color:var(--muted);font-size:.84em}.card .x{color:var(--red);font-size:1.35em;padding:6px 10px;flex:none}
-.empty{text-align:center;color:var(--muted);padding:38px 20px;font-size:.88em;line-height:1.7}
-.logbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.logbar span{font-size:.72em;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.logbar button{font-size:.76em;color:var(--jade);font-weight:600;padding:4px 8px}
-.log{border:1px solid var(--line);border-radius:10px;background:var(--ink-2);padding:10px 12px;
-  margin-bottom:14px;font-size:.82em;max-height:190px;overflow-y:auto;line-height:1.65;
-  font-variant-numeric:tabular-nums}
+.card small{color:var(--muted);font-size:.85em}
+.card .x{color:var(--red);font-size:1.4em;padding:6px 10px;flex:none;border-radius:8px}
+.card .x:active{background:var(--red-soft)}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.9em;line-height:1.7}
+
+/* ---- activity log ---- */
+.logbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.logbar span{font-size:.74em;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.logbar button{font-size:.78em;color:var(--jade);font-weight:700;padding:4px 10px;border-radius:8px}
+.logbar button:active{background:var(--jade-soft)}
+.log{border:1px solid var(--line);border-radius:14px;background:var(--ink-2);padding:12px 14px;
+  margin-bottom:16px;font-size:.84em;max-height:190px;overflow-y:auto;line-height:1.7;
+  font-variant-numeric:tabular-nums;box-shadow:var(--shadow)}
 .log .li{display:flex;gap:8px;padding:1px 0}
-.log .li i{flex:none;width:13px;font-style:normal;text-align:center}
+.log .li i{flex:none;width:14px;font-style:normal;text-align:center}
 .log .li i.ok{color:var(--jade)} .log .li i.er{color:var(--red)} .log .li i.in{color:var(--muted)}
 .log .li .msg{flex:1;min-width:0;word-break:break-word}
 .log .li.err-line .msg{color:var(--red)}
-.log .code{color:var(--red);font-weight:600}
-#toast{position:fixed;left:50%;bottom:104px;transform:translate(-50%,14px);background:var(--ink-3);
-  border:1px solid var(--jade);padding:11px 18px;border-radius:22px;font-size:.88em;z-index:40;
-  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center}
+
+/* ---- toast ---- */
+#toast{position:fixed;left:50%;bottom:calc(var(--navh) + 96px);transform:translate(-50%,14px);
+  background:var(--parchment);color:#fff;border:none;padding:13px 20px;border-radius:24px;font-size:.9em;z-index:40;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center;box-shadow:var(--shadow-lift)}
 #toast.on{opacity:1;transform:translate(-50%,0)}
-.diag{font-size:.84em;border-bottom:1px solid var(--ink-3);padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+
+/* ---- diagnostics ---- */
+.diag{font-size:.85em;border-bottom:1px solid var(--line);padding:12px 0;display:flex;gap:10px;align-items:flex-start}
 .diag i{font-style:normal;flex:none;width:16px;font-weight:700}
 .diag .ok{color:var(--jade)} .diag .no{color:var(--red)} .diag .mb{color:var(--amber)}
 .diag div{flex:1;min-width:0} .diag small{display:block;color:var(--muted);word-break:break-word}
-#ver{text-align:center;color:var(--muted);font-size:.76em;padding:22px 0 6px;letter-spacing:.05em}
-.danger{border:1px solid #40282a;border-radius:10px;padding:12px;margin-top:10px}
+#ver{text-align:center;color:var(--muted);font-size:.78em;padding:24px 0 6px;letter-spacing:.03em}
+.danger{border:1px solid var(--red-soft);background:var(--red-soft);border-radius:14px;padding:15px;margin-top:10px}
+
+/* ---- bottom navigation ---- */
+#nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);background:var(--ink-2);border-top:1px solid var(--line);
+  display:flex;z-index:30;box-shadow:0 -2px 10px rgba(20,40,40,.05)}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--muted);font-size:.62em;font-weight:600;letter-spacing:.02em;padding:0}
+#nav button svg{width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+#nav button[aria-selected="true"]{color:var(--jade)}
+#nav button[aria-selected="true"] svg{stroke:var(--jade)}
+#nav button[aria-selected="true"] .dotpip{fill:var(--jade)}
+#nav button{position:relative}
+.navpip{position:absolute;top:9px;right:calc(50% - 18px);width:9px;height:9px;border-radius:50%;
+  background:var(--red);border:1.5px solid var(--ink-2)}
+
+/* ---- update banner ---- */
+#updbar{flex:none;background:var(--jade);color:#fff;display:flex;align-items:center;gap:10px;
+  padding:12px var(--pad);box-shadow:var(--shadow)}
+#updbar[hidden]{display:none}
+#updbar span{flex:1;font-size:.9em;font-weight:600}
+#updbar #updbtn{background:#fff;color:var(--jade);font-weight:700;padding:9px 18px;border-radius:22px;box-shadow:var(--shadow)}
+#updbar #upddismiss{color:#fff;font-size:1.05em;padding:6px 10px;opacity:.9}
+
+/* ---- guide / manual ---- */
+.guide{line-height:1.65}
+.guide h3{color:var(--jade);font-size:1.05em;margin:22px 0 8px}
+.guide h4{font-size:.95em;margin:16px 0 6px}
+.guide p{margin:8px 0;color:var(--parchment)}
+.guide ul{margin:8px 0;padding-inline-start:22px}
+.guide li{margin:5px 0}
+.guide .step{background:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;box-shadow:var(--shadow)}
+.guide code{background:var(--ink-3);padding:2px 6px;border-radius:6px;font-size:.85em}
+.sublink{display:flex;align-items:center;justify-content:space-between;width:100%;padding:15px;
+  background:var(--ink-2);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font-weight:600;margin-top:8px}
+.sublink:active{background:var(--jade-soft)}
+.sublink svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:2}
 </style>
 </head>
 <body>
 
 <header>
-  <span class="brand"><b>Hifz</b> · Stacked Memorizer</span>
+  <span class="brand"><b>Hifz</b><small>Stacked Memorizer</small></span>
   <span id="netdot"></span>
 </header>
 
-<nav role="tablist">
-  <button role="tab" data-tab="sel" aria-selected="true">Drill</button>
-  <button role="tab" data-tab="drl" aria-selected="false">Play</button>
-  <button role="tab" data-tab="stc" aria-selected="false">Stitch</button>
-  <button role="tab" data-tab="sav" aria-selected="false">Saved</button>
-  <button role="tab" data-tab="set" aria-selected="false">Settings</button>
-</nav>
+<div id="updbar" hidden>
+  <span>A newer version is ready.</span>
+  <button id="updbtn">Update</button>
+  <button id="upddismiss" aria-label="Dismiss">✕</button>
+</div>
 
 <main>
 
@@ -157,7 +247,17 @@ h2:first-child{margin-top:0}
   </div>
   <div class="field">
     <label class="lbl">Ayat range</label>
-    <div class="row"><select class="ctl" id="from"></select><select class="ctl" id="to"></select></div>
+    <div class="row">
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">First ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="from">–</button><input id="from" type="number" inputmode="numeric" min="1" max="286" value="1"><button data-step="1" data-t="from">+</button></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">Last ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="to">–</button><input id="to" type="number" inputmode="numeric" min="1" max="286" value="7"><button data-step="1" data-t="to">+</button></div>
+      </div>
+    </div>
+    <div class="hint" id="rangehint"></div>
   </div>
   <div class="row" style="margin-bottom:14px">
     <button class="btn" id="preview">Show text</button>
@@ -180,22 +280,37 @@ h2:first-child{margin-top:0}
   </div>
 
   <div class="row" style="margin-top:22px">
-    <button class="btn pri" id="go">Start drill</button>
+    <button class="btn pri" id="go">Start</button>
     <button class="btn" id="save">Save range</button>
   </div>
 </section>
 
 <!-- ================= PLAYER ================= -->
 <section class="panel" id="p-drl" hidden>
+  <div class="subhead">
+    <button class="back" id="pback" aria-label="Back to setup">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div><h3 id="ptitle">Now playing</h3><small id="psub"></small></div>
+  </div>
   <div id="logwrap" hidden>
     <div class="logbar"><span>Activity</span><button id="logcopy">Copy</button></div>
     <div id="log" class="log"></div>
   </div>
-  <div id="exprow" hidden style="margin-bottom:14px">
-    <button class="btn" id="expmp3" style="width:100%">Save as MP3</button>
+  <div id="exprow" hidden style="margin-bottom:16px">
+    <div class="lbl">Save to your phone</div>
+    <div class="row">
+      <button class="btn" id="explisten">For listening</button>
+      <button class="btn pri" id="expmusi">For Musicolet</button>
+    </div>
     <div class="hint" id="exphint"></div>
+    <div class="hint" id="expnote" style="margin-top:8px">The Musicolet file has the verses <b>inside the MP3</b> — Musicolet shows each ayah as it's recited. “For listening” is a plain audio file.</div>
+    <button class="btn" id="expmp3" hidden></button>
   </div>
-  <div id="text"><div class="empty">Set a range on Drill, then tap Start drill.<br>Or build a listening track on Stitch.</div></div>
+  <div id="copyall" hidden style="margin-bottom:6px">
+    <button class="btn" id="copyallbtn">Copy all verses</button>
+  </div>
+  <div id="text"><div class="empty">Choose a surah and range, then tap Start.<br>Or build a listening track on Stitch.</div></div>
 </section>
 
 <!-- ================= STITCH ================= -->
@@ -253,6 +368,9 @@ h2:first-child{margin-top:0}
 
 <!-- ================= SETTINGS ================= -->
 <section class="panel" id="p-set" hidden>
+  <button id="updrow" class="sublink" hidden style="border-color:var(--jade);color:var(--jade);margin-bottom:18px">Update available — tap to install
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
   <h2>Reciter</h2>
   <select class="ctl" id="qari"></select>
   <div class="hint" id="qhint"></div>
@@ -290,18 +408,89 @@ h2:first-child{margin-top:0}
 
   <h2>Storage</h2>
   <div class="hint" id="cinfo">—</div>
-  <button class="btn" id="clra" style="width:100%;margin-top:10px">Clear downloaded audio</button>
+  <button class="btn dgr" id="clra" style="width:100%;margin-top:10px">Delete all downloaded recitation — frees space</button>
   <div class="danger">
     <b style="color:var(--red)">Reset everything</b>
     <div class="hint">Wipes downloaded audio, cached text, saved ranges, recipes and settings. Export a backup first — this cannot be undone.</div>
     <button class="btn dgr" id="reset" style="width:100%;margin-top:10px">Reset everything</button>
   </div>
 
+  <h2>Help</h2>
+  <button class="sublink" id="openguide">User guide &amp; how-to
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
   <h2>Diagnostics</h2>
   <div id="diag"></div>
   <button class="btn" id="rediag" style="margin-top:12px;width:100%">Run checks again</button>
 
   <div id="ver"></div>
+</section>
+
+<!-- ================= GUIDE ================= -->
+<section class="panel" id="p-gde" hidden>
+  <div class="subhead">
+    <button class="back" id="gback" aria-label="Back to settings">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div><h3>User guide</h3><small>How Hifz works, end to end</small></div>
+  </div>
+  <div class="guide">
+    <p>Hifz helps you memorise the Qur'an by <b>listening in a structured, repeating pattern</b> — the "stacked" method — and by making plain listening tracks. Everything works offline once loaded, and audio keeps playing with the screen locked.</p>
+
+    <h3>The stacked method</h3>
+    <p>Rather than replaying a whole passage over and over, stacking builds it up ayah by ayah, replaying what came before each new one so the joins stick. For ayat 1–5 with "each ayah ×3" and "range ×5", you hear:</p>
+    <div class="step">Ayah 1 ×3 → (1) then 2 ×3 → (1,2) then 3 ×3 → (1,2,3) then 4 ×3 → (1,2,3,4) then 5 ×3 → then the whole 1→5 five times.</div>
+    <p>The bracketed part is the <b>stack</b> — earlier ayat played once before each new ayah. You control how deep it goes.</p>
+
+    <h3>Memorize tab</h3>
+    <h4>Choosing a passage</h4>
+    <ul>
+      <li>Type in the surah box to filter — English name, Arabic (with or without harakat), the meaning, or the number. E.g. <code>yaseen</code>, <code>يس</code>, <code>36</code>, or <code>cave</code>.</li>
+      <li>Set the ayah range with the two boxes.</li>
+      <li><b>Show text</b> loads the verses without downloading audio — check the range is right first.</li>
+    </ul>
+    <h4>Repetition</h4>
+    <ul>
+      <li><b>Each ayah repeats</b> — how many times a single ayah plays before moving on.</li>
+      <li><b>Whole range repeats</b> — how many times the full passage replays at the end.</li>
+      <li><b>Stack depth</b> — how many earlier ayat replay before each new one. "All previous" is the fullest.</li>
+    </ul>
+    <h4>Playing</h4>
+    <p>Tap <b>Start</b>. Hifz downloads the ayat (kept for next time), joins them into one continuous track, and plays. The verses show on screen and the current one is highlighted. A back arrow returns you to the setup.</p>
+    <p>If a track is long and the browser blocks auto-start, you'll see <b>Ready — tap Play</b>. That's normal; one tap begins it.</p>
+
+    <h3>Stitch tab</h3>
+    <p>Builds a plain listening track — each ayah once, in order, no repeats. Add blocks (surah + range); blocks can cross surahs, and Bismillah opens each new surah. Good for revision or just listening.</p>
+
+    <h3>Saving to your phone's player</h3>
+    <p>After a track is built, two buttons appear:</p>
+    <ul>
+      <li><b>For listening</b> — a plain MP3.</li>
+      <li><b>For Musicolet</b> — an MP3 with the <b>verses embedded inside it</b>, plus a matching <code>.lrc</code> file, delivered as one zip.</li>
+    </ul>
+    <h4>Setting up Musicolet</h4>
+    <div class="step">1. Export "For Musicolet" → a zip lands in Downloads.<br>2. Extract the zip into a folder.<br>3. Open that folder in Musicolet and play.<br>4. Verses appear on screen and lock screen as each ayah is recited.</div>
+    <p>The verses ride inside the MP3, so even without the <code>.lrc</code> a player that reads embedded lyrics will show them. The <code>.lrc</code> is there as a reliable fallback.</p>
+
+    <h3>Copying verses</h3>
+    <p>On the reading screen, each ayah has a small <b>copy</b> button, and <b>Copy all verses</b> copies the whole passage (with verse numbers) as Arabic text.</p>
+
+    <h3>Settings worth knowing</h3>
+    <ul>
+      <li><b>Reciter</b> — four to choose from.</li>
+      <li><b>Drill pause</b> — silence after each ayah: none, a fixed length, or as long as the ayah (to recite it back).</li>
+      <li><b>Veil ayat ahead</b> — blurs upcoming ayat so your eye can't run ahead.</li>
+      <li><b>Arabic / Interface size</b> — scale the text to taste.</li>
+      <li><b>Verses in exported MP3</b> — the embedded-lyrics feature above.</li>
+    </ul>
+
+    <h3>Backups &amp; storage</h3>
+    <p>Downloaded audio is kept on your device so it never re-downloads. <b>Delete all downloaded recitation</b> frees that space. <b>Export backup</b> (Saved tab) saves your ranges, recipes and settings to a file that survives even a full reset — keep one.</p>
+
+    <h3>If something goes wrong</h3>
+    <p>The <b>Activity</b> log on the playing screen shows each step and any error with a code (e.g. <code>NET_AUDIO_404</code>). Tap <b>Copy</b> there to grab the whole log if you need help.</p>
+  </div>
 </section>
 
 </main>
@@ -320,6 +509,26 @@ h2:first-child{margin-top:0}
 
 <div id="toast"></div>
 
+<nav id="nav" role="tablist">
+  <button role="tab" data-tab="sel" aria-selected="true">
+    <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 8h6M8 12h8M8 16h5"/></svg>
+    Memorize
+  </button>
+  <button role="tab" data-tab="stc" aria-selected="false">
+    <svg viewBox="0 0 24 24"><path d="M12 3l8 4-8 4-8-4 8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg>
+    Stitch
+  </button>
+  <button role="tab" data-tab="sav" aria-selected="false">
+    <svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg>
+    Saved
+  </button>
+  <button role="tab" data-tab="set" aria-selected="false">
+    <span class="navpip" id="setpip" hidden></span>
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a7.7 7.7 0 000-2l2-1.5-2-3.4-2.3 1a7.6 7.6 0 00-1.7-1l-.3-2.5H9.9l-.3 2.5a7.6 7.6 0 00-1.7 1l-2.3-1-2 3.4 2 1.5a7.7 7.7 0 000 2l-2 1.5 2 3.4 2.3-1a7.6 7.6 0 001.7 1l.3 2.5h4.2l.3-2.5a7.6 7.6 0 001.7-1l2.3 1 2-3.4z"/></svg>
+    Settings
+  </button>
+</nav>
+
 <script>
 "use strict";
 /* ============================================================================
@@ -333,8 +542,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v11';
-const BUILD   = '2026-07-18 15:00 UTC';
+const VERSION = 'v13';
+const BUILD   = '2026-08-02 11:30 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -369,7 +578,7 @@ const sName = n => { const s = SURAHS.find(x=>x.n===n); return s ? s.en : 'Surah
 const ascii = s => s.replace(/[^\x20-\x7E]/g,'').replace(/[\/\\:*?"<>|]/g,'-').replace(/\s+/g,' ').trim();
 
 const DEF = {qari:'Husary_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
-             wake:false, asz:34, uisz:17, rep:3, rng:5, sd:20, surah:1, from:1, to:7,
+             wake:false, asz:34, uisz:19, rep:3, rng:5, sd:20, surah:1, from:1, to:7,
              sgap:1, sgapmode:'none', lyrics:true};
 const LS = {
   get(k,d){ try{ const v=localStorage.getItem('hifz.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
@@ -396,6 +605,12 @@ if(!LS.get('gapmig6',false)){
   if(!(S.sgap>0)) S.sgap = DEF.sgap;
   delete S.echo;
   saveS(); LS.set('gapmig6',true);
+}
+// v12: native reskin bumps the default interface size. Raise old installs once,
+// but only if the user never nudged it above the previous default of 17.
+if(!LS.get('bump12',false)){
+  if(!(S.uisz > 17)) S.uisz = DEF.uisz;
+  saveS(); LS.set('bump12',true);
 }
 
 let SURAHS = [], TEXT = {}, BISM = '';
@@ -454,7 +669,24 @@ function fallbackCopy(text, done){
     const ta=document.createElement('textarea'); ta.value=text;
     ta.style.cssText='position:fixed;left:-9999px;top:0'; document.body.appendChild(ta);
     ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); done && done();
-  }catch(e){ toast('Copy not supported — screenshot the log instead'); }
+  }catch(e){ toast('Copy not supported — screenshot instead'); }
+}
+function copyText(text, okMsg){
+  const done = ()=>toast(okMsg||'Copied');
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
+  else fallbackCopy(text, done);
+}
+// All verses currently shown, Arabic + verse numbers, unique ayat in order.
+function copyAllVerses(){
+  if(!VIEW.length) return toast('Nothing to copy yet');
+  const seen=new Set(), lines=[]; let last=null;
+  VIEW.forEach(v=>{
+    const key=v.s+':'+v.a; if(seen.has(key)) return; seen.add(key);
+    if(v.s!==last){ lines.push(`— ${sName(v.s)} —`); last=v.s; }
+    lines.push(segLyric({s:v.s,a:v.a}));
+  });
+  copyText(lines.join('\n'), `Copied ${seen.size} verse${seen.size>1?'s':''}`);
 }
 
 /* --------------------------------------------------------------- storage */
@@ -769,12 +1001,14 @@ function stop(){
   $('progfill').style.width='0';
   $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
   $('play').textContent='Play';
+  if(pendingReload) setTimeout(()=>location.reload(), 300);
 }
 function finish(){
   relWake(); $('play').textContent='Play';
   $('phase').textContent='Complete'; $('phase').className='p-rep'; $('pos').textContent='';
   $('progfill').style.width='100%'; segI=-1; paint(null);
   toast(MODE==='drill' ? 'Range complete. May Allah make it firm.' : 'Track complete.');
+  if(pendingReload) setTimeout(()=>location.reload(), 1200);
 }
 async function reqWake(){
   if(!S.wake || !('wakeLock' in navigator) || wake) return;
@@ -833,8 +1067,10 @@ function renderView(){
     const t = (TEXT[v.s]||[])[v.a-1];
     const d = document.createElement('div');
     d.className='ayah'; d.dataset.s=v.s; d.dataset.a=v.a;
-    d.innerHTML = `<span class="t"></span><span class="num">${v.a}</span>`;
+    d.innerHTML = `<span class="t"></span><span class="num">${v.a}</span><button class="cpy">Copy</button>`;
     d.querySelector('.t').textContent = t ? t.text : '…';
+    d.querySelector('.cpy').onclick = (e)=>{ e.stopPropagation();
+      copyText(`${segLyric({s:v.s,a:v.a})}`, 'Ayah copied'); };
     box.appendChild(d);
   });
   document.documentElement.style.setProperty('--asz', S.asz+'px');
@@ -902,12 +1138,16 @@ function makeZip(files){   // files: [{name, u8}] -> Blob
   chunks.push(new Uint8Array(cd), new Uint8Array(eocd));
   return new Blob(chunks,{type:'application/zip'});
 }
-async function exportAudio(){
+async function exportAudio(withLyrics){
   if(!PARTS.length) return toast('Nothing built yet');
   const artist = (RECITERS.find(r=>r.id===S.qari)||{}).name||'';
   const base = ascii(LABEL) || 'Hifz track';
-  const withLrc = S.lyrics && SEG.length;
-  const btn=$('expmp3'); if(btn){ btn.disabled=true; btn.textContent='Packaging…'; }
+  const withLrc = (withLyrics===undefined ? S.lyrics : withLyrics) && SEG.length;
+  const btns=[$('explisten'),$('expmusi')];
+  btns.forEach(b=>{ if(b) b.disabled=true; });
+  const busy = withLrc ? $('expmusi') : $('explisten');
+  const busyLabel = busy ? busy.textContent : '';
+  if(busy) busy.textContent='Saving…';
   try{
     const files=[];
     for(let i=0;i<PARTS.length;i++){
@@ -928,19 +1168,21 @@ async function exportAudio(){
     if(files.length === 1){
       saveBlob(new Blob([files[0].u8],{type:'audio/mpeg'}), files[0].name);
       logLine(`Saved ${files[0].name}`, 'ok');
-      toast('Saved to your downloads');
+      toast('✓ Saved to your Downloads folder');
     } else {
       saveBlob(makeZip(files), `${base}.zip`);
       const mp3s = files.filter(f=>f.name.endsWith('.mp3')).length;
       logLine(`Saved ${base}.zip — ${mp3s} track${mp3s>1?'s':''}${withLrc?' + lyrics':''}`, 'ok');
-      toast(withLrc ? 'Saved zip with verses (.lrc) inside' : `Saved ${mp3s} files in one zip`);
+      toast(withLrc ? '✓ Saved zip in Downloads — extract it, then open the folder in Musicolet'
+                    : `✓ Saved zip of ${mp3s} files in Downloads`);
     }
   }catch(e){
     e.code = e.code || 'ZIP';
     logError(e);
-    toast('Could not build the file — try Build again');
+    toast('Could not build the file — try again');
   }
-  if(btn){ btn.disabled=false; btn.textContent='Save as MP3'; }
+  btns.forEach(b=>{ if(b) b.disabled=false; });
+  if(busy) busy.textContent=busyLabel;
 }
 
 /* ------------------------------------------------------- drill setup tab */
@@ -1005,16 +1247,28 @@ async function applyFilter(){
     sync(); try{ await loadSurah(hits[0]); }catch(e){} budget();
   }
 }
+function updateRangeHint(s){
+  const h=$('rangehint'); if(h && s) h.textContent = `${s.en} has ${s.count} ayat — type any number.`;
+}
 function fillAyat(surahSel, fromSel, toSel, f, t){
   const s = SURAHS.find(x=>x.n===+surahSel.value); if(!s) return;
-  const o = Array.from({length:s.count},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
-  fromSel.innerHTML=o; toSel.innerHTML=o;
-  fromSel.value = Math.min(Math.max(1,f||1), s.count);
-  toSel.value   = Math.min(Math.max(1,t||1), s.count);
+  const setOne = (el,val)=>{
+    val = Math.min(Math.max(1, val||1), s.count);
+    if(el.tagName==='SELECT'){
+      el.innerHTML = Array.from({length:s.count},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+    } else { el.min=1; el.max=s.count; }   // number-box path (drill from/to)
+    el.value = val;
+  };
+  setOne(fromSel, f); setOne(toSel, t);
+  if(fromSel.id==='from') updateRangeHint(s);
 }
 function sync(){
-  let f=+$('from').value, t=+$('to').value;
-  if(t<f){ t=f; $('to').value=t; }
+  const s = SURAHS.find(x=>x.n===+$('surah').value);
+  const max = s ? s.count : 286;
+  let f=Math.min(Math.max(1, Math.round(+$('from').value||1)), max);
+  let t=Math.min(Math.max(1, Math.round(+$('to').value||1)), max);
+  if(t<f){ t=f; }
+  $('from').value=f; $('to').value=t;     // reflect any clamping back into the boxes
   const n = t-f+1;
   $('sd').max = Math.max(1,n-1);          // clamps the input first…
   const depth = depthVal();               // …so this reads the clamped value
@@ -1067,8 +1321,11 @@ async function preview(){
     renderView();
     $('bar').hidden=true; $('exprow').hidden=true;   // no transport until a real build
     $('logwrap').hidden=true;                        // nothing downloaded in preview
-    tab('drl');
-    toast('Preview — check the range, then Start drill');
+    $('copyall').hidden=false;
+    $('ptitle').textContent = `${sName(n)} ${f}–${t}`;
+    $('psub').textContent = 'Preview — text only';
+    showPlayer('sel');
+    toast('Preview — check the range, then Start');
   }catch(e){
     toast(navigator.onLine ? 'Could not load the text' : 'Offline — this surah is not saved yet');
   }
@@ -1077,7 +1334,10 @@ async function preview(){
 async function begin(){
   const n=+$('surah').value, f=+$('from').value, t=+$('to').value;
   $('go').disabled=true; $('go').textContent='Preparing…';
-  MODE='drill'; tab('drl'); prepStart(); clearLog();
+  MODE='drill'; showPlayer('sel'); prepStart(); clearLog();
+  $('copyall').hidden=false;
+  $('ptitle').textContent = `${sName(n)} ${f}–${t}`;
+  $('psub').textContent = 'Drill';
   const plays = countQueue(f,t,+$('rep').value,+$('rng').value,depthVal());
   logLine(`Starting drill — ${sName(n)} ${f}–${t}`, 'in');
   try{
@@ -1208,7 +1468,10 @@ async function buildStitch(andPlay){
   const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
   LABEL = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
   $('sbuild').disabled=true; $('sexp').disabled=true;
-  tab('drl'); prepStart(); clearLog();
+  showPlayer('stc'); prepStart(); clearLog();
+  $('copyall').hidden=false;
+  $('ptitle').textContent = 'Listening track';
+  $('psub').textContent = LABEL;
   logLine(`Building track — ${BLOCKS.length} block${BLOCKS.length>1?'s':''}`, 'in');
   try{
     logLine('Reading text…', 'in');
@@ -1379,14 +1642,23 @@ async function diagnose(){
 }
 
 /* ----------------------------------------------------------------- wiring */
+let playerBack = 'sel';    // which tab the player's back-arrow returns to
+// The bottom nav has four items (sel/stc/sav/set). The player (drl) and guide
+// (gde) are sub-views: they show over a nav section and keep it highlighted.
+function navHi(id){
+  document.querySelectorAll('#nav button').forEach(b=> b.setAttribute('aria-selected', String(b.dataset.tab===id)));
+}
+function hideAllPanels(){ ['sel','drl','stc','sav','set','gde'].forEach(t=> $('p-'+t).hidden = true); }
 function tab(id){
-  document.querySelectorAll('nav button').forEach(b=> b.setAttribute('aria-selected', String(b.dataset.tab===id)));
-  ['sel','drl','stc','sav','set'].forEach(t=> $('p-'+t).hidden = (t!==id));
+  hideAllPanels(); $('p-'+id).hidden = false;
+  navHi(id==='drl' ? playerBack : id==='gde' ? 'set' : id);
   if(id==='sav'){ renderLists(); renderRecipes(); }
   if(id==='stc') renderBlocks();
   if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
   document.querySelector('main').scrollTop = 0;
 }
+// Show the now-playing view, remembering where its back arrow returns to.
+function showPlayer(origin){ playerBack = origin || 'sel'; tab('drl'); }
 function toggle(node, key, after){
   node.onclick = ()=>{ S[key]=!S[key]; node.setAttribute('aria-checked',String(S[key])); saveS(); after&&after(); };
 }
@@ -1416,7 +1688,10 @@ function applySettings(){
   paintGapModes();
 }
 function boot(){
-  document.querySelectorAll('nav button').forEach(b=> b.onclick = ()=>tab(b.dataset.tab));
+  document.querySelectorAll('#nav button').forEach(b=> b.onclick = ()=>tab(b.dataset.tab));
+  $('pback').onclick = ()=>tab(playerBack);
+  $('gback').onclick = ()=>tab('set');
+  $('openguide').onclick = ()=>tab('gde');
   document.querySelectorAll('[data-step]').forEach(b=> b.onclick = ()=>{
     const i=$(b.dataset.t);
     i.value = Math.max(+i.min, Math.min(+i.max, +i.value + (+b.dataset.step))); sync(); });
@@ -1443,13 +1718,12 @@ function boot(){
   $('prog').onclick = e =>{ if(!TOTAL) return;
     const r=e.currentTarget.getBoundingClientRect();
     seekTo(((e.clientX-r.left)/r.width)*TOTAL); };
-  $('expmp3').onclick = exportAudio;
+  $('explisten').onclick = ()=>exportAudio(false);   // plain MP3
+  $('expmusi').onclick   = ()=>exportAudio(true);    // MP3 + embedded verses + .lrc
+  $('copyallbtn').onclick = copyAllVerses;
   $('logcopy').onclick = ()=>{
     const text = logRows.join('\n') + `\nHifz ${VERSION} · ${BUILD}\n${navigator.userAgent}`;
-    const done = ()=>toast('Activity log copied');
-    if(navigator.clipboard && navigator.clipboard.writeText)
-      navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
-    else fallbackCopy(text, done);
+    copyText(text, 'Activity log copied');
   };
 
   // stitch
@@ -1505,9 +1779,55 @@ function boot(){
   addEventListener('online',net); addEventListener('offline',net); net();
 }
 
+/* ---------------------------------------------------- app auto-update (SW) */
+// A separate sw.js caches the app for offline use and serves the freshest
+// index.html when online. This code compares the running VERSION against the
+// version currently published; if newer, it surfaces a gentle banner (once per
+// session) plus a persistent row + dot in Settings. Reloading is deferred while
+// audio is playing so a recitation is never interrupted.
+let updateReady = false, pendingReload = false;
+function showUpdateUI(){
+  if(updateReady) return;
+  updateReady = true;
+  $('updrow').hidden = false;
+  $('setpip').hidden = false;
+  if(!sessionStorage.getItem('hifz.updDismissed')) $('updbar').hidden = false;
+}
+function applyUpdate(){
+  if(!updateReady) return;
+  if(el && !el.paused){          // never reload mid-recitation
+    pendingReload = true; $('updbar').hidden = true;
+    return toast('Update will apply when playback stops');
+  }
+  toast('Updating…'); setTimeout(()=>location.reload(), 250);
+}
+async function checkForUpdate(){
+  if(updateReady) return;
+  try{
+    const res = await fetch('./index.html', {cache:'no-store'});
+    if(!res.ok) return;
+    const txt = await res.text();
+    const m = txt.match(/const VERSION = '(v[^']+)'/);
+    if(m && m[1] !== VERSION) showUpdateUI();
+  }catch(e){/* offline or blocked — ignore */}
+}
+function initUpdates(){
+  $('updbtn').onclick = applyUpdate;
+  $('updrow').onclick = applyUpdate;
+  $('upddismiss').onclick = ()=>{ $('updbar').hidden = true;
+    try{ sessionStorage.setItem('hifz.updDismissed','1'); }catch(e){} };
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    checkForUpdate();
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState==='visible') checkForUpdate(); });
+    setInterval(checkForUpdate, 30*60*1000);   // also poll hourly-ish if left open
+  }
+}
+
 (async function init(){
   SIL = {128:b64ToU8(SIL_B64[128]), 192:b64ToU8(SIL_B64[192])};
-  boot(); applySettings();
+  boot(); applySettings(); initUpdates();
   try{
     await loadSurahs(); await loadBismillah();
     $('aszdemo').textContent = BISM;
