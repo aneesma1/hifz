@@ -10,7 +10,7 @@
    Updating the app itself = upload the new index.html only.
 ------------------------------------------------------------------------- */
 
-const CACHE = 'hifz-cache-v1';   // bump ONLY when this file's logic changes
+const CACHE = 'hifz-cache-v2';   // bump ONLY when this file's logic changes
 const ASSETS = [
   './',
   './index.html',
@@ -38,20 +38,28 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
 
-  const isDoc = req.mode === 'navigate' || req.destination === 'document';
+  const url = new URL(req.url);
+  // The app's update-check uses a cache-busted "?_=" probe. Never intercept it —
+  // let it hit the network directly so version checks are always accurate.
+  if (url.search.indexOf('_=') !== -1) return;
+
+  // Treat the page itself (navigation, any .html, or the site root) as
+  // network-first so an online reload always gets the freshest app.
+  const isDoc = req.mode === 'navigate' || req.destination === 'document'
+    || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
 
   if (isDoc) {
-    // Network-first for the page: online users always get the freshest
-    // index.html (bypassing the HTTP cache); offline falls back to the cache.
+    // Network-first for the page: online users always get the freshest app
+    // (bypassing the HTTP cache); offline falls back to the cache.
     e.respondWith((async () => {
       try {
         const fresh = await fetch(req, { cache: 'no-store' });
         const c = await caches.open(CACHE);
-        c.put('./index.html', fresh.clone());
-        c.put('./', fresh.clone());
+        c.put(req, fresh.clone());          // cache under its own URL
+        c.put('./', fresh.clone());         // and as the root fallback
         return fresh;
       } catch (err) {
-        const cached = await caches.match('./index.html') || await caches.match('./');
+        const cached = await caches.match(req) || await caches.match('./index.html') || await caches.match('./');
         return cached || new Response('Offline and no cached copy yet.', {
           status: 503, headers: { 'Content-Type': 'text/plain' }
         });
