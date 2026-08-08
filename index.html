@@ -72,7 +72,7 @@ input[type=range]{width:100%;accent-color:var(--jade);height:36px}
 .stepper{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--ink-2);overflow:hidden;box-shadow:var(--shadow)}
 .stepper button{width:3em;height:3em;min-width:52px;min-height:52px;font-size:1.4em;color:var(--jade);flex:none;font-weight:600}
 .stepper button:active{background:var(--jade-soft)}
-.stepper input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:700;font-size:1.35em;padding:0}
+.stepper input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:700;font-size:1.35em;padding:0;min-width:2.5em}
 .stepper input:focus{outline:none;color:var(--jade)}
 .hint{font-size:.85em;color:var(--muted);margin-top:7px;line-height:1.5}
 .sublbl{font-size:.72em;color:var(--muted);margin-bottom:5px;font-weight:600}
@@ -263,7 +263,24 @@ h2:first-child{margin-top:0}
 .searchbar .ic:active{background:var(--jade-soft)}
 .searchbar .ic.rec{background:var(--red);}.searchbar .ic.rec svg{stroke:#fff}
 .searchbar .ic.on{background:var(--jade-soft)}
-/* key-cap style for the Arabic keyboard button */
+/* collapsed saved items — one line, expand on tap */
+.sitem{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
+.sitem-head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
+.sitem-head:active{background:var(--jade-soft)}
+.sitem-ref{flex:1;min-width:0}
+.sitem-ref b{display:block;font-size:.9em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sitem-ref small{display:block;font-size:.82em;color:var(--muted);direction:rtl;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--arabic)}
+.sitem-chev{flex:none;color:var(--muted);transition:transform .15s}
+.sitem.open .sitem-chev{transform:rotate(90deg)}
+.sitem-body{display:none;padding:0 14px 14px;border-top:1px solid var(--line)}
+.sitem.open .sitem-body{display:block}
+.sitem-body .vtext{direction:rtl;text-align:right;font-family:var(--arabic);font-size:calc(var(--asz,34px)*.82);line-height:2.2;padding:12px 0 10px}
+.sitem-acts{display:flex;gap:8px;flex-wrap:wrap}
+.sitem-acts button{padding:9px 14px;border-radius:9px;font-size:.82em;font-weight:600}
+.bkbtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:var(--ink-3);border:1px solid var(--line);flex:none;font-size:1em}
+.bkbtn.on{background:var(--gold-soft);border-color:var(--gold)}
+/* search bar collapse */
+#qcollapse{font-size:1.2em;color:var(--muted);width:40px;height:40px}
 .kbdic{font-family:var(--arabic);font-size:1.6em;font-weight:700;color:var(--jade);
   background:var(--ink-2);border:2px solid var(--jade);border-radius:10px;
   width:46px;height:46px;box-shadow:0 3px 0 var(--jade);letter-spacing:0}
@@ -312,6 +329,7 @@ h2:first-child{margin-top:0}
 
 <header>
   <span class="brand"><b>Hifz</b><small>Stacked Memorizer</small></span>
+  <span id="hdrver" style="font-size:.65em;color:var(--muted);letter-spacing:.02em;margin-left:auto;margin-right:8px"></span>
   <span id="netdot"></span>
 </header>
 
@@ -343,16 +361,24 @@ h2:first-child{margin-top:0}
       <button class="ic" id="qmic" aria-label="Voice search (Arabic)">
         <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
       </button>
+      <button class="ic" id="qcollapse" aria-label="Collapse search" style="font-size:1.1em;color:var(--muted)">✕</button>
     </div>
     <div class="searchacts">
       <button class="btn cv" id="qconv">→ ع</button>
       <button class="btn pri" id="qsearch">Search</button>
       <button class="btn" id="qclear">Clear</button>
+      <button class="btn" id="qreset" style="color:var(--red)">Reset</button>
     </div>
     <div id="akbd" hidden></div>
   </div>
 
   <div id="rd-browse">
+    <div id="continuechip" hidden style="margin-bottom:12px">
+      <button class="sublink" id="continuebtn" style="background:var(--jade-soft);border-color:var(--jade)">
+        <span id="continuelabel">Continue reading</span>
+        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
     <div class="readtools">
       <input class="ctl" id="rdfilter" type="search" inputmode="search" autocomplete="off" placeholder="Go to surah — name or number">
     </div>
@@ -509,6 +535,8 @@ h2:first-child{margin-top:0}
     </button>
     <div><h3>Saved</h3><small>Ranges, recipes &amp; verses</small></div>
   </div>
+  <h2>Bookmarks</h2>
+  <div id="bookmarks"></div>
   <h2>Saved verses</h2>
   <div id="verses"></div>
   <h2>Drill ranges</h2>
@@ -704,8 +732,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v21';
-const BUILD   = '2026-08-08 09:30 UTC';
+const VERSION = 'v22';
+const BUILD   = '2026-08-08 12:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -756,6 +784,10 @@ const saveR = () => LS.set('recipes',RECIPES);
 const saveB = () => LS.set('blocks',BLOCKS);
 let VERSES = LS.get('verses',[]);   // saved verses for practice: [{s,a,text}]
 const saveV = () => LS.set('verses',VERSES);
+let BOOKMARKS = LS.get('bookmarks',[]);  // manual bookmarks: [{s,a,text,label}] max 10
+const saveBK = () => LS.set('bookmarks',BOOKMARKS);
+let LASTREAD = LS.get('lastread',null);  // {s,a} auto last-read position
+const saveLR = () => LS.set('lastread',LASTREAD);
 if(!LS.get('bump4',false)){
   if(!(S.asz > 25)) S.asz = DEF.asz;              // only if never raised by hand
   if(typeof S.uisz !== 'number') S.uisz = DEF.uisz;
@@ -1399,10 +1431,10 @@ function searchSurah(q){
     return SIDX.filter(x=> x.en.includes(n) || x.en.replace(/ /g,'').includes(n)).map(x=>x.n); }
   const n=normAr(q); return SIDX.filter(x=>x.ar.includes(n)).map(x=>x.n);
 }
-// Surah names for the pickers: strip harakat only (keep letters). Native
-// <select> pickers on some devices render combining marks as tofu boxes;
-// without harakat the name is still clearly readable and renders everywhere.
-const displayAr = s => (s||'').replace(/[\u064B-\u0652\u0670\u0640\u0653-\u0655]/g,'');
+// Strip ALL Arabic diacritics/combining marks from names shown in native pickers.
+// System fonts in <select> dropdowns often can't render combining marks like sukun (ْ)
+// on certain letter combinations (e.g. عِمْرَان shows tofu). Letters are kept intact.
+const displayAr = s => (s||'').replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
 function fillSurahSelect(sel){
   sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
 }
@@ -1736,7 +1768,7 @@ function saveRecipe(){
 }
 function exportBackup(){
   saveBlob(new Blob([JSON.stringify({app:'hifz', v:3, exported:new Date().toISOString(),
-    settings:S, lists:LISTS, recipes:RECIPES, blocks:BLOCKS, verses:VERSES}, null, 2)],{type:'application/json'}),
+    settings:S, lists:LISTS, recipes:RECIPES, blocks:BLOCKS, verses:VERSES, bookmarks:BOOKMARKS}, null, 2)],{type:'application/json'}),
     `hifz-backup-${new Date().toISOString().slice(0,10)}.json`);
   toast('Backup saved. Keep it somewhere safe.');
 }
@@ -1762,6 +1794,12 @@ function importBackup(file){
         saveR();
       }
       if(Array.isArray(inc.blocks)){ BLOCKS = inc.blocks; saveB(); }
+      if(Array.isArray(inc.bookmarks)){
+        const seen=new Set(BOOKMARKS.map(b=>b.s+':'+b.a));
+        inc.bookmarks.forEach(b=>{ if(typeof b.s!=='number') return; const k=b.s+':'+b.a;
+          if(seen.has(k)) return; seen.add(k); BOOKMARKS.push(b); });
+        saveBK();
+      }
       if(Array.isArray(inc.verses)){
         const seen = new Set(VERSES.map(v=>v.s+':'+v.a));
         inc.verses.forEach(v=>{ if(typeof v.s!=='number') return; const k=v.s+':'+v.a;
@@ -1838,9 +1876,9 @@ function tab(id){
   hideAllPanels(); $('p-'+id).hidden = false;
   const navMap = {drl:playerBack, sav:'more', set:'more', gde:'more'};
   navHi(navMap[id] || id);
-  if(id==='rd')  ensureReadTab();
+  if(id==='rd'){ ensureReadTab(); updateContinueChip(); }
   else{ $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; }
-  if(id==='sav'){ renderVerses(); renderLists(); renderRecipes(); }
+  if(id==='sav'){ renderBookmarks(); renderVerses(); renderLists(); renderRecipes(); }
   if(id==='stc') renderBlocks();
   if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
   document.querySelector('main').scrollTop = 0;
@@ -1889,10 +1927,11 @@ let QURAN = [], QIDX = [];
 // Normalise Arabic: drop harakat/tatweel, fold letter variants. Used for
 // harakat-insensitive matching (typed with or without diacritics both work).
 const stripArabic = s => s
-  .replace(/[\u064B-\u065F\u0640\u06D6-\u06ED]/g,'')
+  .replace(/[\u064B-\u065F\u0640\u06D6-\u06ED\u06E5\u06E6]/g,'')
   .replace(/\u0629/g,'\u0647').replace(/\u0649/g,'\u064A')
   .replace(/\u0624/g,'\u0648').replace(/\u0626/g,'\u064A').replace(/\u0621/g,'')
   .replace(/[\u0622\u0623\u0625\u0671\u0627\u0670]/g,'')
+  .replace(/(.)\1+/g,'$1')
   .replace(/\s+/g,' ').trim();
 // Phonetic fold: collapse letters Latin can't tell apart — a fuzzy fallback so
 // an imperfect transliteration still finds its verse.
@@ -1947,6 +1986,20 @@ function searchQuran(arabicQuery){
 const verseRef = (s,a) => `${sName(s)} ${s}:${a}`;
 const verseCopy = (s,a,text) => `${text}\n— ${verseRef(s,a)}`;
 const isSaved = (s,a) => VERSES.some(v=>v.s===s && v.a===a);
+const isBkd   = (s,a) => BOOKMARKS.some(b=>b.s===s && b.a===a);
+function toggleBookmark(s,a,text){
+  const i=BOOKMARKS.findIndex(b=>b.s===s&&b.a===a);
+  if(i>=0){ BOOKMARKS.splice(i,1); toast('Bookmark removed'); }
+  else if(BOOKMARKS.length>=10){ toast('Max 10 bookmarks — remove one first'); return false; }
+  else { BOOKMARKS.unshift({s,a,text}); toast('Bookmarked'); }
+  saveBK(); return true;
+}
+function updateLastRead(s,a){ LASTREAD={s,a}; saveLR(); updateContinueChip(); }
+function updateContinueChip(){
+  if(!LASTREAD||!SURAHS.length){ $('continuechip').hidden=true; return; }
+  $('continuechip').hidden=false;
+  $('continuelabel').textContent=`Continue reading — ${verseRef(LASTREAD.s,LASTREAD.a)}`;
+}
 
 let rdSurah = 1;
 function renderReadSurah(n){
@@ -2022,22 +2075,31 @@ function setVtext(el, rawText, query){
   });
 }
 let lastQuery=''; // persists so back-to-results restores the highlighted view
-// A verse row used in results (with highlight) and reader (without).
+// A verse row used in both the reader and results list.
 function verseRowEl(s, a, text, showRef, query){
   const d = document.createElement('div'); d.className='vrow'; d.dataset.s=s; d.dataset.a=a;
   d.innerHTML = `<div class="vtext"></div>
     <div class="vref"><span class="r"></span>
       <button class="cp">Copy</button>
-      <button class="sv">Save</button></div>`;
+      <button class="sv">Save</button>
+      <button class="bkbtn" title="Bookmark">🔖</button></div>`;
   setVtext(d.querySelector('.vtext'), text, query||'');
   d.querySelector('.r').textContent = showRef ? verseRef(s,a) : `Ayah ${a}`;
   const svBtn = d.querySelector('.sv');
-  const paint = ()=>{ const on=isSaved(s,a); svBtn.textContent=on?'Saved':'Save'; svBtn.classList.toggle('on',on); };
-  paint();
-  d.querySelector('.cp').onclick = e=>{ e.stopPropagation(); copyText(verseCopy(s,a,text), 'Verse copied'); };
-  svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paint(); };
-  // Tap the row (not the buttons) → show in context
-  if(showRef){ d.dataset.clickable='1'; d.onclick = e=>{ if(e.target.tagName!=='BUTTON') openInContext(s,a,text,query); }; }
+  const bkBtn = d.querySelector('.bkbtn');
+  const paintSv = ()=>{ const on=isSaved(s,a); svBtn.textContent=on?'Saved':'Save'; svBtn.classList.toggle('on',on); };
+  const paintBk = ()=>{ bkBtn.classList.toggle('on',isBkd(s,a)); };
+  paintSv(); paintBk();
+  d.querySelector('.cp').onclick = e=>{ e.stopPropagation(); copyText(verseCopy(s,a,text),'Verse copied'); };
+  svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paintSv(); };
+  bkBtn.onclick = e=>{ e.stopPropagation(); toggleBookmark(s,a,text); paintBk();
+    renderBookmarks && setTimeout(renderBookmarks,0); };
+  // auto last-read on scroll into view (reader only, not results)
+  if(!showRef && 'IntersectionObserver' in window){
+    const obs=new IntersectionObserver(([en])=>{ if(en.isIntersecting) updateLastRead(s,a); },{threshold:.5});
+    obs.observe(d);
+  }
+  if(showRef){ d.dataset.clickable='1'; d.onclick=e=>{ if(e.target.tagName!=='BUTTON') openInContext(s,a,text,query); }; }
   return d;
 }
 function toggleVerse(s,a,text){
@@ -2176,25 +2238,51 @@ function voiceSearch(){
   recog.onend = ()=>{ recstate=false; $('qmic').classList.remove('rec'); };
   try{ recog.start(); }catch(e){ recstate=false; $('qmic').classList.remove('rec'); }
 }
+// Build a collapsed saved-item card (one line preview, expand on tap).
+function savedItemEl(ref, preview, actions, onOpen){
+  const d=document.createElement('div'); d.className='sitem';
+  d.innerHTML=`<div class="sitem-head"><div class="sitem-ref"><b></b><small></small></div><span class="sitem-chev">›</span></div><div class="sitem-body"><div class="vtext sitem-vtext"></div><div class="sitem-acts"></div></div>`;
+  d.querySelector('.sitem-ref b').textContent=ref;
+  d.querySelector('.sitem-ref small').textContent=preview;
+  const body=d.querySelector('.sitem-body');
+  const acts=d.querySelector('.sitem-acts');
+  actions.forEach(({label,cls,fn})=>{
+    const b=document.createElement('button'); b.className='btn '+(cls||''); b.textContent=label;
+    b.onclick=e=>{ e.stopPropagation(); fn(); }; acts.appendChild(b);
+  });
+  d.querySelector('.sitem-head').onclick=()=>{ d.classList.toggle('open'); if(d.classList.contains('open')&&onOpen) onOpen(d); };
+  return d;
+}
+function renderBookmarks(){
+  const box=$('bookmarks');
+  if(!BOOKMARKS.length){ box.innerHTML='<div class="empty">No bookmarks yet. Tap 🔖 on any ayah while reading.</div>'; return; }
+  box.innerHTML='';
+  BOOKMARKS.forEach((b,i)=>{
+    const preview=b.text?b.text.slice(0,40)+'…':'';
+    const d=savedItemEl(verseRef(b.s,b.a), preview, [
+      {label:'Go to',cls:'pri',fn:()=>{ tab('rd'); openInContext(b.s,b.a,b.text,''); }},
+      {label:'Copy',fn:()=>copyText(verseCopy(b.s,b.a,b.text),'Copied')},
+      {label:'Remove',cls:'dgr',fn:()=>{ BOOKMARKS.splice(i,1); saveBK(); renderBookmarks(); }}
+    ], el=>{ el.querySelector('.sitem-vtext').textContent=b.text;
+             document.documentElement.style.setProperty('--asz',S.asz+'px'); });
+    box.appendChild(d);
+  });
+}
 function renderVerses(){
   const box=$('verses');
   if(!VERSES.length){ box.innerHTML='<div class="empty">No saved verses yet. Find some in the Read tab and tap Save.</div>'; return; }
   box.innerHTML='';
   VERSES.forEach((v,i)=>{
-    const d=document.createElement('div'); d.className='vrow';
-    d.innerHTML=`<div class="vtext"></div>
-      <div class="vref"><span class="r"></span>
-        <button class="cp">Copy</button>
-        <button class="sv on" style="color:var(--jade);background:var(--jade-soft)">Drill</button>
-        <button class="x" style="color:var(--red)">✕</button></div>`;
-    d.querySelector('.vtext').textContent = v.text;
-    d.querySelector('.r').textContent = verseRef(v.s,v.a);
-    d.querySelector('.cp').onclick = ()=> copyText(verseCopy(v.s,v.a,v.text), 'Verse copied');
-    d.querySelector('.sv').onclick = ()=> drillVerse(v);
-    d.querySelector('.x').onclick = ()=>{ VERSES.splice(i,1); saveV(); renderVerses(); };
+    const preview=v.text?v.text.slice(0,40)+'…':'';
+    const d=savedItemEl(verseRef(v.s,v.a), preview, [
+      {label:'Drill',cls:'pri',fn:()=>drillVerse(v)},
+      {label:'Read',fn:()=>{ tab('rd'); openInContext(v.s,v.a,v.text,''); }},
+      {label:'Copy',fn:()=>copyText(verseCopy(v.s,v.a,v.text),'Copied')},
+      {label:'Remove',cls:'dgr',fn:()=>{ VERSES.splice(i,1); saveV(); renderVerses(); }}
+    ], el=>{ el.querySelector('.sitem-vtext').textContent=v.text;
+             document.documentElement.style.setProperty('--asz',S.asz+'px'); });
     box.appendChild(d);
   });
-  document.documentElement.style.setProperty('--asz', S.asz+'px');
 }
 // Send a saved verse straight into the drill setup.
 async function drillVerse(v){
@@ -2217,24 +2305,32 @@ function boot(){
   $('goSettings').onclick = ()=>tab('set');
   $('goGuide').onclick = ()=>tab('gde');
   // Read + search
-  // search pill expand/collapse
+  // search pill expand/collapse/reset
   function expandSearch(){ $('searchwrap').classList.remove('collapsed'); $('q').focus(); }
   function collapseSearch(){ $('searchwrap').classList.add('collapsed'); $('akbd').hidden=true; $('qkbd').classList.remove('on'); }
-  $('searchpill').onclick = expandSearch;
+  function resetSearch(){ $('q').value=''; lastQuery=''; collapseSearch();
+    $('rd-results').hidden=true; $('rd-ctx').hidden=true; $('rd-browse').hidden=false;
+    $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; }
+  $('searchpill').onclick  = expandSearch;
+  $('qcollapse').onclick   = collapseSearch;
+  $('qreset').onclick      = resetSearch;
   $('q').onfocus = ()=> $('searchwrap').classList.remove('collapsed');
-  // collapse back to pill after search runs or clear
-  const origRunSearch = runSearch;
-  // collapse after search + back
+  // continue reading chip
+  $('continuebtn').onclick = ()=>{ if(LASTREAD){
+    const arr=TEXT[LASTREAD.s]||[]; const ay=arr.find(a=>a.n===LASTREAD.a);
+    openInContext(LASTREAD.s,LASTREAD.a,ay?.text||'',''); }};
+  // version in header
+  if($('hdrver')) $('hdrver').textContent=VERSION;
+  // ctx back
   $('ctxback').onclick = ()=>{
     $('rd-ctx').hidden=true; $('rd-results').hidden=false;
-    $('p-rd').classList.remove('ctx-open');
-    $('ctxbar').hidden=true;
+    $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true;
     document.querySelector('main').scrollTop=0;
   };
   $('qsearch').onclick = runSearch;
-  $('qclear').onclick = clearSearch;
-  $('qmic').onclick = voiceSearch;
-  $('qkbd').onclick = toggleKbd;
+  $('qclear').onclick  = clearSearch;
+  $('qmic').onclick    = voiceSearch;
+  $('qkbd').onclick    = toggleKbd;
   $('qconv').onclick = ()=>{ const v=$('q').value.trim();
     if(!/[a-z]/i.test(v)) return toast('Type Latin letters to convert (e.g. rahman)');
     $('q').value = translitToArabic(v); toast('Converted — check it, then Search'); };
