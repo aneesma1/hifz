@@ -229,6 +229,13 @@ h2:first-child{margin-top:0}
 
 /* ---- Read tab: search bar, reader, results ---- */
 .searchwrap{position:sticky;top:0;background:var(--ink);padding-bottom:12px;margin-bottom:4px;z-index:5}
+.ctx-open .searchwrap{display:none}
+.ctxhdr{position:sticky;top:0;background:var(--ink);padding-bottom:12px;z-index:5;display:flex;align-items:flex-start;gap:12px}
+.ctxhdr .back{flex:none}
+.ctxinfo{flex:1;min-width:0}
+.ctxinfo h3{margin:0 0 3px;font-size:1em;font-weight:700}
+.ctxinfo .ctxmsg{font-size:.8em;color:var(--muted);line-height:1.4;direction:rtl;text-align:right;
+  background:var(--jade-soft);border-radius:8px;padding:6px 10px;margin-top:4px;font-family:var(--arabic)}
 .searchbar{display:flex;gap:8px;align-items:center;background:var(--ink-2);border:1px solid var(--line);
   border-radius:14px;padding:6px 8px 6px 14px;box-shadow:var(--shadow)}
 .searchbar input{flex:1;min-width:0;border:none;background:none;color:var(--parchment);font-size:1em;padding:8px 0}
@@ -330,11 +337,14 @@ h2:first-child{margin-top:0}
   </div>
 
   <div id="rd-ctx" hidden>
-    <div class="subhead" style="margin-bottom:14px">
+    <div class="ctxhdr">
       <button class="back" id="ctxback" aria-label="Back to results">
         <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div><h3 id="ctxtitle">Reading</h3><small>Tap ← to return to results</small></div>
+      <div class="ctxinfo">
+        <h3 id="ctxtitle">Reading</h3>
+        <div class="ctxmsg" id="ctxmsg"></div>
+      </div>
     </div>
     <div id="ctxtext"></div>
   </div>
@@ -674,8 +684,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v19';
-const BUILD   = '2026-08-08 06:00 UTC';
+const VERSION = 'v20';
+const BUILD   = '2026-08-08 08:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1809,6 +1819,7 @@ function tab(id){
   const navMap = {drl:playerBack, sav:'more', set:'more', gde:'more'};
   navHi(navMap[id] || id);
   if(id==='rd')  ensureReadTab();
+  else $('p-rd').classList.remove('ctx-open');
   if(id==='sav'){ renderVerses(); renderLists(); renderRecipes(); }
   if(id==='stc') renderBlocks();
   if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
@@ -1930,7 +1941,7 @@ function renderReadSurah(n){
   document.documentElement.style.setProperty('--asz', S.asz+'px');
 }
 // A verse row used in both the reader and the results list.
-// ---- highlight engine: mark matched chars in original harakat text ----
+// ---- highlight engine: phrase-first, per-word fallback (min 3 chars) ----
 function hlSegments(rawText, query){
   if(!query) return [{text:rawText, hl:false}];
   const normChars=[];
@@ -1938,19 +1949,31 @@ function hlSegments(rawText, query){
     const s=stripArabic(rawText[i]); if(s) normChars.push({norm:s,orig:i});
   }
   const normStr=normChars.map(x=>x.norm).join('');
-  const words=stripArabic(query).split(' ').filter(Boolean);
-  const ranges=[];
-  for(const needle of words){
-    if(!needle) continue;
-    let p=0;
-    while(p<=normStr.length-needle.length){
-      const idx=normStr.indexOf(needle,p); if(idx<0) break;
-      const s=normChars[idx]?.orig;
-      const e=(normChars[Math.min(idx+needle.length-1,normChars.length-1)]?.orig??0)+1;
-      if(s!=null) ranges.push({s,e}); p=idx+1;
+
+  function findRanges(needles){
+    const ranges=[];
+    for(const needle of needles){
+      if(!needle||needle.length<2) continue;   // skip single-char fragments
+      let p=0;
+      while(p<=normStr.length-needle.length){
+        const idx=normStr.indexOf(needle,p); if(idx<0) break;
+        const s=normChars[idx]?.orig;
+        const e=(normChars[Math.min(idx+needle.length-1,normChars.length-1)]?.orig??0)+1;
+        if(s!=null) ranges.push({s,e}); p=idx+1;
+      }
     }
+    return ranges;
+  }
+
+  // Try the whole phrase first; fall back to per-word only if no matches.
+  const phrase=stripArabic(query);
+  let ranges=findRanges([phrase]);
+  if(!ranges.length){
+    const words=phrase.split(' ').filter(w=>w.length>=3);   // min 3 chars
+    ranges=findRanges(words);
   }
   if(!ranges.length) return [{text:rawText,hl:false}];
+
   ranges.sort((a,b)=>a.s-b.s);
   const merged=[{...ranges[0]}];
   for(let i=1;i<ranges.length;i++){
@@ -2035,8 +2058,10 @@ function clearSearch(){
 // Open a result in its surah context, scroll the target ayah to center, highlight it.
 async function openInContext(s, a, text, query){
   $('rd-results').hidden=true; $('rd-ctx').hidden=false;
+  $('p-rd').classList.add('ctx-open');     // hides .searchwrap
   const box=$('ctxtext'); box.innerHTML='<div class="empty">Loading…</div>';
-  $('ctxtitle').textContent=verseRef(s,a);
+  $('ctxtitle').textContent = verseRef(s,a);
+  $('ctxmsg').textContent = query ? `نتيجة بحث: ${query}` : '';
   try{
     await loadSurah(s);
     box.innerHTML='';
@@ -2167,6 +2192,7 @@ function boot(){
   // Read + search
   $('ctxback').onclick = ()=>{
     $('rd-ctx').hidden=true; $('rd-results').hidden=false;
+    $('p-rd').classList.remove('ctx-open');  // restores .searchwrap
     document.querySelector('main').scrollTop=0;
   };
   $('qsearch').onclick = runSearch;
