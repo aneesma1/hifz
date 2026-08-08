@@ -237,9 +237,30 @@ h2:first-child{margin-top:0}
 .searchbar .ic svg{width:22px;height:22px;stroke:var(--jade);fill:none;stroke-width:2}
 .searchbar .ic:active{background:var(--jade-soft)}
 .searchbar .ic.rec{background:var(--red);}.searchbar .ic.rec svg{stroke:#fff}
+.searchbar .ic.on{background:var(--jade-soft)}
 .searchacts{display:flex;gap:8px;margin-top:8px}
 .searchacts .btn{flex:1;padding:11px}
 .searchacts .btn.cv{flex:.7;font-family:var(--arabic)}
+
+/* ---- in-app Arabic keyboard: large, bold, high-contrast keys ---- */
+#akbd{margin-top:10px;background:var(--ink-3);border:1px solid var(--line);border-radius:14px;
+  padding:8px;box-shadow:var(--shadow)}
+#akbd[hidden]{display:none}
+.akrow{display:flex;gap:6px;margin-bottom:6px;justify-content:center;direction:rtl}
+.akrow:last-child{margin-bottom:0}
+.akey{flex:1;min-width:0;height:52px;border-radius:10px;background:var(--ink-2);border:1px solid var(--line);
+  font-family:var(--arabic);font-size:1.7em;font-weight:700;color:var(--parchment);
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);position:relative;
+  padding:0;line-height:1}
+.akey:active{background:var(--jade);color:#fff;transform:scale(.95)}
+.akey.wide{flex:1.6}
+.akey.act{font-family:var(--ui);font-size:.8em;font-weight:600;color:var(--jade)}
+.akey.var::after{content:'';position:absolute;top:6px;left:8px;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+/* variant sub-panel */
+#akbd .varpanel{display:flex;gap:8px;justify-content:center;direction:rtl;padding:4px 0 10px;margin-bottom:6px;
+  border-bottom:1px dashed var(--line);flex-wrap:wrap}
+#akbd .varpanel .akey{flex:0 0 auto;width:58px}
+.varhint{font-size:.72em;color:var(--muted);text-align:center;margin-bottom:8px;direction:ltr}
 .readtools{display:flex;gap:8px;margin-bottom:12px;align-items:center}
 .readtools .ctl{flex:1}
 .reslabel{font-size:.8em;color:var(--muted);font-weight:600;margin:4px 2px 10px}
@@ -274,6 +295,7 @@ h2:first-child{margin-top:0}
   <div class="searchwrap">
     <div class="searchbar">
       <input id="q" type="text" placeholder="Search the Qur'an…" autocomplete="off">
+      <button class="ic" id="qkbd" aria-label="Arabic keyboard"><b style="font-family:var(--arabic);font-size:1.15em;color:var(--jade)">ﺍ</b></button>
       <button class="ic" id="qmic" aria-label="Voice search (Arabic)">
         <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
       </button>
@@ -283,6 +305,7 @@ h2:first-child{margin-top:0}
       <button class="btn pri" id="qsearch">Search</button>
       <button class="btn" id="qclear">Clear</button>
     </div>
+    <div id="akbd" hidden></div>
   </div>
 
   <div id="rd-browse">
@@ -633,8 +656,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v16';
-const BUILD   = '2026-08-06 09:00 UTC';
+const VERSION = 'v18';
+const BUILD   = '2026-08-07 12:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1094,7 +1117,7 @@ function stop(){
   $('progfill').style.width='0';
   $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
   $('play').textContent='Play';
-  if(pendingReload) setTimeout(()=>location.reload(), 300);
+  if(pendingReload) hardRefresh();
 }
 // New session: stop, clear the built track, return to setup. Saved ranges,
 // recipes, settings and downloaded audio are all left untouched.
@@ -1112,7 +1135,7 @@ function finish(){
   $('phase').textContent='Complete'; $('phase').className='p-rep'; $('pos').textContent='';
   $('progfill').style.width='100%'; segI=-1; paint(null);
   toast(MODE==='drill' ? 'Range complete. May Allah make it firm.' : 'Track complete.');
-  if(pendingReload) setTimeout(()=>location.reload(), 1200);
+  if(pendingReload) setTimeout(hardRefresh, 900);
 }
 async function reqWake(){
   if(!S.wake || !('wakeLock' in navigator) || wake) return;
@@ -1328,8 +1351,12 @@ function searchSurah(q){
     return SIDX.filter(x=> x.en.includes(n) || x.en.replace(/ /g,'').includes(n)).map(x=>x.n); }
   const n=normAr(q); return SIDX.filter(x=>x.ar.includes(n)).map(x=>x.n);
 }
+// Surah names for the pickers: strip harakat only (keep letters). Native
+// <select> pickers on some devices render combining marks as tofu boxes;
+// without harakat the name is still clearly readable and renders everywhere.
+const displayAr = s => (s||'').replace(/[\u064B-\u0652\u0670\u0640\u0653-\u0655]/g,'');
 function fillSurahSelect(sel){
-  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${s.ar}</option>`).join('');
+  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
 }
 // Narrow the dropdown to matches; auto-select when exactly one remains.
 async function applyFilter(){
@@ -1338,7 +1365,7 @@ async function applyFilter(){
   const set = new Set(hits);
   const keep = SURAHS.filter(s=>set.has(s.n));
   $('surah').innerHTML = (keep.length?keep:SURAHS)
-    .map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${s.ar}</option>`).join('');
+    .map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
   const h=$('sfhint');
   if(!q.trim()){ h.hidden=true; }
   else { h.hidden=false;
@@ -1773,7 +1800,7 @@ let readReady = false;
 function ensureReadTab(){
   if(readReady || !SURAHS.length) return; readReady = true;
   const sel = $('rdsurah');
-  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${s.ar}</option>`).join('');
+  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
   sel.value = rdSurah;
   loadSurah(rdSurah).then(()=>renderReadSurah(rdSurah)).catch(()=>{});
 }
@@ -1935,6 +1962,60 @@ function showResults(q, res){
 function clearSearch(){
   $('q').value=''; $('rd-results').hidden=true; $('rd-browse').hidden=false;
 }
+// ---- in-app Arabic keyboard (base letters; variant keys open a sub-panel) ----
+const AK_ROWS = [
+  ['ا','ب','ت','ث','ج','ح','خ'],
+  ['د','ذ','ر','ز','س','ش','ص'],
+  ['ض','ط','ظ','ع','غ','ف','ق'],
+  ['ك','ل','م','ن','ه','و','ي']
+];
+const AK_VARIANTS = {'ا':['ا','أ','إ','آ','ء'],'ه':['ه','ة'],'ي':['ي','ى'],'و':['و','ؤ']};
+let akbdBuilt=false;
+function insCh(ch){ $('q').value += ch; closeVar(); }
+function backspace(){ const i=$('q'); i.value = i.value.slice(0,-1); }
+function closeVar(){ const p=$('varpanel'), h=$('varhint'); if(p)p.remove(); if(h)h.remove(); }
+function openVar(base){
+  closeVar();
+  const box=$('akbd');
+  const hint=document.createElement('div'); hint.className='varhint'; hint.id='varhint';
+  hint.textContent='Choose a form — tap to insert';
+  const p=document.createElement('div'); p.className='varpanel'; p.id='varpanel';
+  AK_VARIANTS[base].forEach(v=>{
+    const k=document.createElement('button'); k.className='akey'; k.type='button'; k.textContent=v;
+    k.addEventListener('click', e=>{ e.preventDefault(); insCh(v); });
+    p.appendChild(k);
+  });
+  box.insertBefore(p, box.firstChild);
+  box.insertBefore(hint, box.firstChild);
+}
+function buildKbd(){
+  if(akbdBuilt) return; akbdBuilt=true;
+  const box=$('akbd'); box.innerHTML='';
+  AK_ROWS.forEach(row=>{
+    const r=document.createElement('div'); r.className='akrow';
+    row.forEach(ch=>{
+      const k=document.createElement('button'); k.type='button';
+      k.className='akey'+(AK_VARIANTS[ch]?' var':''); k.textContent=ch;
+      k.addEventListener('click', e=>{ e.preventDefault();
+        if(AK_VARIANTS[ch]) openVar(ch); else insCh(ch); });
+      r.appendChild(k);
+    });
+    box.appendChild(r);
+  });
+  const ar=document.createElement('div'); ar.className='akrow';
+  const sp=document.createElement('button'); sp.type='button'; sp.className='akey wide act'; sp.textContent='space';
+  sp.addEventListener('click', e=>{ e.preventDefault(); insCh(' '); });
+  const bs=document.createElement('button'); bs.type='button'; bs.className='akey act';
+  bs.textContent='⌫ back'; bs.addEventListener('click', e=>{ e.preventDefault(); backspace(); });
+  ar.appendChild(sp); ar.appendChild(bs);
+  box.appendChild(ar);
+}
+function toggleKbd(){
+  const box=$('akbd');
+  if(box.hidden){ buildKbd(); box.hidden=false; $('qkbd').classList.add('on');
+    try{ $('q').blur(); }catch(e){} }        // avoid the device keyboard fighting it
+  else { box.hidden=true; closeVar(); $('qkbd').classList.remove('on'); }
+}
 // Voice (Arabic) — fills the box only, never auto-searches.
 let recog = null, recstate = false;
 function voiceSearch(){
@@ -1992,6 +2073,7 @@ function boot(){
   $('qsearch').onclick = runSearch;
   $('qclear').onclick = clearSearch;
   $('qmic').onclick = voiceSearch;
+  $('qkbd').onclick = toggleKbd;
   $('qconv').onclick = ()=>{ const v=$('q').value.trim();
     if(!/[a-z]/i.test(v)) return toast('Type Latin letters to convert (e.g. rahman)');
     $('q').value = translitToArabic(v); toast('Converted — check it, then Search'); };
@@ -2104,34 +2186,48 @@ function boot(){
 // version currently published; if newer, it surfaces a gentle banner (once per
 // session) plus a persistent row + dot in Settings. Reloading is deferred while
 // audio is playing so a recitation is never interrupted.
-let updateReady = false, pendingReload = false;
+let updateReady = false, pendingReload = false, updBusy = false;
 function showUpdateUI(){
-  if(updateReady) return;
   updateReady = true;
   $('updrow').hidden = false;
   $('setpip').hidden = false;
   if(!sessionStorage.getItem('hifz.updDismissed')) $('updbar').hidden = false;
 }
-function applyUpdate(){
-  if(!updateReady) return;
+// Nuclear-but-reliable refresh: drop every cache, unregister the service
+// worker, then navigate fresh. Guarantees the newest files load even if an old
+// worker was stubbornly serving stale content.
+async function hardRefresh(){
+  if(updBusy) return; updBusy = true; toast('Updating…');
+  try{ const ks = await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }catch(e){}
+  try{ const regs = await navigator.serviceWorker.getRegistrations();
+       await Promise.all(regs.map(r=>r.unregister())); }catch(e){}
+  const base = location.href.split('#')[0].split('?')[0];
+  setTimeout(()=> location.replace(base + '?u=' + Date.now()), 200);
+}
+async function applyUpdate(){
+  if(updBusy) return;
   if(el && !el.paused){          // never reload mid-recitation
     pendingReload = true; $('updbar').hidden = true;
     return toast('Update will apply when playback stops');
   }
-  toast('Updating…'); setTimeout(()=>location.reload(), 250);
+  // Re-verify before acting, so a stale flag can't leave a dead button.
+  toast('Checking…');
+  await checkForUpdate(true);
+  if(!updateReady) return toast('You\u2019re on the latest version (' + VERSION + ')');
+  hardRefresh();
 }
-async function checkForUpdate(){
-  if(updateReady) return;
+async function checkForUpdate(force){
+  if(updateReady && !force) return;
   try{
-    // Compare the RUNNING page against a fresh copy of *itself* (not a hardcoded
-    // name), cache-busted so neither the HTTP cache nor the service worker can
-    // serve a stale copy — that was making the banner show forever.
+    // Compare the RUNNING page against a fresh copy of *itself*, cache-busted so
+    // neither the HTTP cache nor the service worker can serve a stale copy.
     const base = location.href.split('#')[0].split('?')[0];
     const res = await fetch(base + '?_=' + Date.now(), {cache:'no-store'});
     if(!res.ok) return;
     const txt = await res.text();
     const m = txt.match(/const VERSION = '(v[^']+)'/);
     if(m && m[1] !== VERSION) showUpdateUI();
+    else if(force){ updateReady=false; $('updrow').hidden=true; $('setpip').hidden=true; $('updbar').hidden=true; }
   }catch(e){/* offline or blocked — ignore */}
 }
 function initUpdates(){
@@ -2144,7 +2240,7 @@ function initUpdates(){
     checkForUpdate();
     document.addEventListener('visibilitychange', ()=>{
       if(document.visibilityState==='visible') checkForUpdate(); });
-    setInterval(checkForUpdate, 30*60*1000);   // also poll hourly-ish if left open
+    setInterval(checkForUpdate, 30*60*1000);
   }
 }
 
