@@ -229,13 +229,31 @@ h2:first-child{margin-top:0}
 
 /* ---- Read tab: search bar, reader, results ---- */
 .searchwrap{position:sticky;top:0;background:var(--ink);padding-bottom:12px;margin-bottom:4px;z-index:5}
+.searchwrap.collapsed .searchbar{padding:0}
+.searchwrap.collapsed .searchbar input,
+.searchwrap.collapsed .searchbar .ic{display:none}
+.searchwrap.collapsed .searchacts{display:none}
+.searchwrap.collapsed #akbd{display:none}
+.searchpill{display:none;align-items:center;gap:8px;background:var(--ink-2);border:1px solid var(--line);
+  border-radius:24px;padding:10px 16px;box-shadow:var(--shadow);cursor:pointer;color:var(--muted);font-size:.92em}
+.searchpill svg{width:18px;height:18px;stroke:var(--jade);fill:none;stroke-width:2}
+.searchwrap.collapsed .searchpill{display:flex}
 .ctx-open .searchwrap{display:none}
-.ctxhdr{position:sticky;top:0;background:var(--ink);padding-bottom:12px;z-index:5;display:flex;align-items:flex-start;gap:12px}
-.ctxhdr .back{flex:none}
-.ctxinfo{flex:1;min-width:0}
-.ctxinfo h3{margin:0 0 3px;font-size:1em;font-weight:700}
-.ctxinfo .ctxmsg{font-size:.8em;color:var(--muted);line-height:1.4;direction:rtl;text-align:right;
-  background:var(--jade-soft);border-radius:8px;padding:6px 10px;margin-top:4px;font-family:var(--arabic)}
+/* fixed one-row context bar — never scrolls away */
+#ctxbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  background:var(--ink-2);border-bottom:1px solid var(--line);box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;padding:10px var(--pad);z-index:25;
+  padding-top:calc(10px + env(safe-area-inset-top))}
+#ctxbar[hidden]{display:none}
+#ctxbar .back{flex:none;width:40px;height:40px;border-radius:50%;background:var(--jade);
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+#ctxbar .back svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+#ctxbar .back:active{opacity:.8}
+#ctxbarlabel{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  font-size:.88em;font-weight:600;color:var(--parchment)}
+#ctxbarlabel span{color:var(--muted);font-weight:400}
+/* push content down when ctxbar is showing */
+.ctx-open #ctxtext{margin-top:64px}
 .searchbar{display:flex;gap:8px;align-items:center;background:var(--ink-2);border:1px solid var(--line);
   border-radius:14px;padding:6px 8px 6px 14px;box-shadow:var(--shadow)}
 .searchbar input{flex:1;min-width:0;border:none;background:none;color:var(--parchment);font-size:1em;padding:8px 0}
@@ -251,7 +269,7 @@ h2:first-child{margin-top:0}
   width:46px;height:46px;box-shadow:0 3px 0 var(--jade);letter-spacing:0}
 .kbdic.on{background:var(--jade);color:#fff;box-shadow:none;transform:translateY(2px)}
 /* amber highlight for matched search text */
-.hl{background:#F5C842;border-radius:3px;color:#1C2A2A;padding:0 1px}
+.hl{background:#F5C842 !important;border-radius:3px;color:#1C2A2A !important;padding:0 2px;display:inline;unicode-bidi:inherit}
 .searchacts{display:flex;gap:8px;margin-top:8px}
 .searchacts .btn{flex:1;padding:11px}
 .searchacts .btn.cv{flex:.7;font-family:var(--arabic)}
@@ -303,11 +321,22 @@ h2:first-child{margin-top:0}
   <button id="upddismiss" aria-label="Dismiss">✕</button>
 </div>
 
+<div id="ctxbar" hidden>
+  <button class="back" id="ctxback" aria-label="Back to results">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <span id="ctxbarlabel">Reading</span>
+</div>
+
 <main>
 
 <!-- ================= READ + SEARCH ================= -->
 <section class="panel" id="p-rd" hidden>
-  <div class="searchwrap">
+  <div class="searchwrap collapsed" id="searchwrap">
+    <div class="searchpill" id="searchpill">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      Search the Qur'an…
+    </div>
     <div class="searchbar">
       <input id="q" type="text" placeholder="Search the Qur'an…" autocomplete="off">
       <button class="ic kbdic" id="qkbd" aria-label="Arabic keyboard">ا</button>
@@ -337,15 +366,6 @@ h2:first-child{margin-top:0}
   </div>
 
   <div id="rd-ctx" hidden>
-    <div class="ctxhdr">
-      <button class="back" id="ctxback" aria-label="Back to results">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <div class="ctxinfo">
-        <h3 id="ctxtitle">Reading</h3>
-        <div class="ctxmsg" id="ctxmsg"></div>
-      </div>
-    </div>
     <div id="ctxtext"></div>
   </div>
 </section>
@@ -684,8 +704,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v20';
-const BUILD   = '2026-08-08 08:00 UTC';
+const VERSION = 'v21';
+const BUILD   = '2026-08-08 09:30 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1819,7 +1839,7 @@ function tab(id){
   const navMap = {drl:playerBack, sav:'more', set:'more', gde:'more'};
   navHi(navMap[id] || id);
   if(id==='rd')  ensureReadTab();
-  else $('p-rd').classList.remove('ctx-open');
+  else{ $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; }
   if(id==='sav'){ renderVerses(); renderLists(); renderRecipes(); }
   if(id==='stc') renderBlocks();
   if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
@@ -1995,8 +2015,10 @@ function setVtext(el, rawText, query){
   el.innerHTML='';
   const segs = query ? hlSegments(rawText, query) : [{text:rawText,hl:false}];
   segs.forEach(seg=>{
-    if(seg.hl){ const m=document.createElement('mark'); m.className='hl'; m.textContent=seg.text; el.appendChild(m); }
-    else el.appendChild(document.createTextNode(seg.text));
+    if(seg.hl){
+      const sp=document.createElement('span'); sp.className='hl';
+      sp.textContent=seg.text; el.appendChild(sp);
+    } else el.appendChild(document.createTextNode(seg.text));
   });
 }
 let lastQuery=''; // persists so back-to-results restores the highlighted view
@@ -2041,6 +2063,7 @@ async function runSearch(){
 }
 function showResults(q, res){
   $('rd-browse').hidden=true; $('rd-results').hidden=false; $('rd-ctx').hidden=true;
+  $('searchwrap').classList.add('collapsed');   // collapse to pill after search
   $('reslabel').textContent = res.length
     ? `${res.length} verse${res.length>1?'s':''} matching \u201C${q}\u201D`
     : `No verses matched \u201C${q}\u201D — try without harakat, or convert Latin to Arabic first.`;
@@ -2054,14 +2077,18 @@ function showResults(q, res){
 function clearSearch(){
   $('q').value=''; lastQuery='';
   $('rd-results').hidden=true; $('rd-ctx').hidden=true; $('rd-browse').hidden=false;
+  $('searchwrap').classList.remove('collapsed');
 }
 // Open a result in its surah context, scroll the target ayah to center, highlight it.
 async function openInContext(s, a, text, query){
   $('rd-results').hidden=true; $('rd-ctx').hidden=false;
-  $('p-rd').classList.add('ctx-open');     // hides .searchwrap
+  $('p-rd').classList.add('ctx-open');
+  $('ctxbar').hidden=false;
+  const label = query
+    ? `${verseRef(s,a)} <span>· Results for "${query}"</span>`
+    : verseRef(s,a);
+  $('ctxbarlabel').innerHTML = label;
   const box=$('ctxtext'); box.innerHTML='<div class="empty">Loading…</div>';
-  $('ctxtitle').textContent = verseRef(s,a);
-  $('ctxmsg').textContent = query ? `نتيجة بحث: ${query}` : '';
   try{
     await loadSurah(s);
     box.innerHTML='';
@@ -2190,9 +2217,18 @@ function boot(){
   $('goSettings').onclick = ()=>tab('set');
   $('goGuide').onclick = ()=>tab('gde');
   // Read + search
+  // search pill expand/collapse
+  function expandSearch(){ $('searchwrap').classList.remove('collapsed'); $('q').focus(); }
+  function collapseSearch(){ $('searchwrap').classList.add('collapsed'); $('akbd').hidden=true; $('qkbd').classList.remove('on'); }
+  $('searchpill').onclick = expandSearch;
+  $('q').onfocus = ()=> $('searchwrap').classList.remove('collapsed');
+  // collapse back to pill after search runs or clear
+  const origRunSearch = runSearch;
+  // collapse after search + back
   $('ctxback').onclick = ()=>{
     $('rd-ctx').hidden=true; $('rd-results').hidden=false;
-    $('p-rd').classList.remove('ctx-open');  // restores .searchwrap
+    $('p-rd').classList.remove('ctx-open');
+    $('ctxbar').hidden=true;
     document.querySelector('main').scrollTop=0;
   };
   $('qsearch').onclick = runSearch;
