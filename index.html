@@ -238,6 +238,13 @@ h2:first-child{margin-top:0}
 .searchbar .ic:active{background:var(--jade-soft)}
 .searchbar .ic.rec{background:var(--red);}.searchbar .ic.rec svg{stroke:#fff}
 .searchbar .ic.on{background:var(--jade-soft)}
+/* key-cap style for the Arabic keyboard button */
+.kbdic{font-family:var(--arabic);font-size:1.6em;font-weight:700;color:var(--jade);
+  background:var(--ink-2);border:2px solid var(--jade);border-radius:10px;
+  width:46px;height:46px;box-shadow:0 3px 0 var(--jade);letter-spacing:0}
+.kbdic.on{background:var(--jade);color:#fff;box-shadow:none;transform:translateY(2px)}
+/* amber highlight for matched search text */
+.hl{background:#F5C842;border-radius:3px;color:#1C2A2A;padding:0 1px}
 .searchacts{display:flex;gap:8px;margin-top:8px}
 .searchacts .btn{flex:1;padding:11px}
 .searchacts .btn.cv{flex:.7;font-family:var(--arabic)}
@@ -265,6 +272,7 @@ h2:first-child{margin-top:0}
 .readtools .ctl{flex:1}
 .reslabel{font-size:.8em;color:var(--muted);font-weight:600;margin:4px 2px 10px}
 .vrow{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.vrow[data-clickable]{cursor:pointer}.vrow[data-clickable]:active{background:var(--jade-soft)}
 .vrow .vtext{direction:rtl;text-align:right;font-family:var(--arabic);font-size:calc(var(--asz,34px)*.86);line-height:2.3}
 .vref{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
 .vref .r{flex:1;font-size:.82em;color:var(--muted);font-weight:600}
@@ -295,7 +303,7 @@ h2:first-child{margin-top:0}
   <div class="searchwrap">
     <div class="searchbar">
       <input id="q" type="text" placeholder="Search the Qur'an…" autocomplete="off">
-      <button class="ic" id="qkbd" aria-label="Arabic keyboard"><b style="font-family:var(--arabic);font-size:1.15em;color:var(--jade)">ﺍ</b></button>
+      <button class="ic kbdic" id="qkbd" aria-label="Arabic keyboard">ا</button>
       <button class="ic" id="qmic" aria-label="Voice search (Arabic)">
         <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
       </button>
@@ -319,6 +327,16 @@ h2:first-child{margin-top:0}
   <div id="rd-results" hidden>
     <div class="reslabel" id="reslabel"></div>
     <div id="reslist"></div>
+  </div>
+
+  <div id="rd-ctx" hidden>
+    <div class="subhead" style="margin-bottom:14px">
+      <button class="back" id="ctxback" aria-label="Back to results">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div><h3 id="ctxtitle">Reading</h3><small>Tap ← to return to results</small></div>
+    </div>
+    <div id="ctxtext"></div>
   </div>
 </section>
 <section class="panel" id="p-sel">
@@ -656,8 +674,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v18';
-const BUILD   = '2026-08-07 12:00 UTC';
+const VERSION = 'v19';
+const BUILD   = '2026-08-08 06:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1912,19 +1930,69 @@ function renderReadSurah(n){
   document.documentElement.style.setProperty('--asz', S.asz+'px');
 }
 // A verse row used in both the reader and the results list.
-function verseRowEl(s, a, text, showRef){
+// ---- highlight engine: mark matched chars in original harakat text ----
+function hlSegments(rawText, query){
+  if(!query) return [{text:rawText, hl:false}];
+  const normChars=[];
+  for(let i=0;i<rawText.length;i++){
+    const s=stripArabic(rawText[i]); if(s) normChars.push({norm:s,orig:i});
+  }
+  const normStr=normChars.map(x=>x.norm).join('');
+  const words=stripArabic(query).split(' ').filter(Boolean);
+  const ranges=[];
+  for(const needle of words){
+    if(!needle) continue;
+    let p=0;
+    while(p<=normStr.length-needle.length){
+      const idx=normStr.indexOf(needle,p); if(idx<0) break;
+      const s=normChars[idx]?.orig;
+      const e=(normChars[Math.min(idx+needle.length-1,normChars.length-1)]?.orig??0)+1;
+      if(s!=null) ranges.push({s,e}); p=idx+1;
+    }
+  }
+  if(!ranges.length) return [{text:rawText,hl:false}];
+  ranges.sort((a,b)=>a.s-b.s);
+  const merged=[{...ranges[0]}];
+  for(let i=1;i<ranges.length;i++){
+    const last=merged[merged.length-1];
+    if(ranges[i].s<=last.e) last.e=Math.max(last.e,ranges[i].e);
+    else merged.push({...ranges[i]});
+  }
+  const segs=[]; let pos=0;
+  for(const r of merged){
+    if(pos<r.s) segs.push({text:rawText.slice(pos,r.s),hl:false});
+    segs.push({text:rawText.slice(r.s,r.e),hl:true});
+    pos=r.e;
+  }
+  if(pos<rawText.length) segs.push({text:rawText.slice(pos),hl:false});
+  return segs;
+}
+// Render a .vtext div with amber highlights on matched segments.
+function setVtext(el, rawText, query){
+  el.innerHTML='';
+  const segs = query ? hlSegments(rawText, query) : [{text:rawText,hl:false}];
+  segs.forEach(seg=>{
+    if(seg.hl){ const m=document.createElement('mark'); m.className='hl'; m.textContent=seg.text; el.appendChild(m); }
+    else el.appendChild(document.createTextNode(seg.text));
+  });
+}
+let lastQuery=''; // persists so back-to-results restores the highlighted view
+// A verse row used in results (with highlight) and reader (without).
+function verseRowEl(s, a, text, showRef, query){
   const d = document.createElement('div'); d.className='vrow'; d.dataset.s=s; d.dataset.a=a;
   d.innerHTML = `<div class="vtext"></div>
     <div class="vref"><span class="r"></span>
       <button class="cp">Copy</button>
       <button class="sv">Save</button></div>`;
-  d.querySelector('.vtext').textContent = text;
+  setVtext(d.querySelector('.vtext'), text, query||'');
   d.querySelector('.r').textContent = showRef ? verseRef(s,a) : `Ayah ${a}`;
   const svBtn = d.querySelector('.sv');
   const paint = ()=>{ const on=isSaved(s,a); svBtn.textContent=on?'Saved':'Save'; svBtn.classList.toggle('on',on); };
   paint();
-  d.querySelector('.cp').onclick = ()=> copyText(verseCopy(s,a,text), 'Verse copied');
-  svBtn.onclick = ()=>{ toggleVerse(s,a,text); paint(); };
+  d.querySelector('.cp').onclick = e=>{ e.stopPropagation(); copyText(verseCopy(s,a,text), 'Verse copied'); };
+  svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paint(); };
+  // Tap the row (not the buttons) → show in context
+  if(showRef){ d.dataset.clickable='1'; d.onclick = e=>{ if(e.target.tagName!=='BUTTON') openInContext(s,a,text,query); }; }
   return d;
 }
 function toggleVerse(s,a,text){
@@ -1940,6 +2008,7 @@ async function runSearch(){
   $('qsearch').disabled=true; $('qsearch').textContent='Searching…';
   try{
     await loadQuran();
+    lastQuery = q;
     showResults(q, searchQuran(q));
   }catch(e){
     logError(e);
@@ -1948,19 +2017,45 @@ async function runSearch(){
   $('qsearch').disabled=false; $('qsearch').textContent='Search';
 }
 function showResults(q, res){
-  $('rd-browse').hidden = true; $('rd-results').hidden = false;
+  $('rd-browse').hidden=true; $('rd-results').hidden=false; $('rd-ctx').hidden=true;
   $('reslabel').textContent = res.length
     ? `${res.length} verse${res.length>1?'s':''} matching \u201C${q}\u201D`
     : `No verses matched \u201C${q}\u201D — try without harakat, or convert Latin to Arabic first.`;
-  const list = $('reslist'); list.innerHTML='';
-  res.slice(0,300).forEach(v=> list.appendChild(verseRowEl(v.s, v.a, v.text, true)));
+  const list=$('reslist'); list.innerHTML='';
+  res.slice(0,300).forEach(v=> list.appendChild(verseRowEl(v.s, v.a, v.text, true, q)));
   if(res.length>300){ const m=document.createElement('div'); m.className='hint';
     m.textContent=`Showing first 300 of ${res.length}. Refine your search to narrow it.`; list.appendChild(m); }
   document.documentElement.style.setProperty('--asz', S.asz+'px');
-  document.querySelector('main').scrollTop = 0;
+  document.querySelector('main').scrollTop=0;
 }
 function clearSearch(){
-  $('q').value=''; $('rd-results').hidden=true; $('rd-browse').hidden=false;
+  $('q').value=''; lastQuery='';
+  $('rd-results').hidden=true; $('rd-ctx').hidden=true; $('rd-browse').hidden=false;
+}
+// Open a result in its surah context, scroll the target ayah to center, highlight it.
+async function openInContext(s, a, text, query){
+  $('rd-results').hidden=true; $('rd-ctx').hidden=false;
+  const box=$('ctxtext'); box.innerHTML='<div class="empty">Loading…</div>';
+  $('ctxtitle').textContent=verseRef(s,a);
+  try{
+    await loadSurah(s);
+    box.innerHTML='';
+    if(s!==1&&s!==9){ const b=document.createElement('div'); b.className='bismline'; b.textContent=BISM; box.appendChild(b); }
+    const ayat=(TEXT[s]||[]);
+    ayat.forEach(ay=>{
+      const d=verseRowEl(s,ay.n,ay.text,false, ay.n===a ? query : '');
+      if(ay.n===a){ d.classList.add('cur'); d.id='ctxayah'; }
+      box.appendChild(d);
+    });
+    document.documentElement.style.setProperty('--asz',S.asz+'px');
+    // Scroll target ayah to vertical center of the screen.
+    requestAnimationFrame(()=>{
+      const el2=document.getElementById('ctxayah');
+      const main=document.querySelector('main');
+      if(el2&&main){ const top=el2.offsetTop-(main.clientHeight/2)+(el2.offsetHeight/2);
+        main.scrollTop=Math.max(0,top); }
+    });
+  }catch(e){ box.innerHTML='<div class="empty">Could not load the surah.</div>'; }
 }
 // ---- in-app Arabic keyboard (base letters; variant keys open a sub-panel) ----
 const AK_ROWS = [
@@ -2070,6 +2165,10 @@ function boot(){
   $('goSettings').onclick = ()=>tab('set');
   $('goGuide').onclick = ()=>tab('gde');
   // Read + search
+  $('ctxback').onclick = ()=>{
+    $('rd-ctx').hidden=true; $('rd-results').hidden=false;
+    document.querySelector('main').scrollTop=0;
+  };
   $('qsearch').onclick = runSearch;
   $('qclear').onclick = clearSearch;
   $('qmic').onclick = voiceSearch;
