@@ -69,10 +69,10 @@ main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--pad);
 .btn[disabled]{opacity:.5}
 input[type=range]{width:100%;accent-color:var(--jade);height:36px}
 
-.stepper{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--ink-2);overflow:hidden;box-shadow:var(--shadow)}
-.stepper button{width:3em;height:3em;min-width:52px;min-height:52px;font-size:1.4em;color:var(--jade);flex:none;font-weight:600}
+.stepper{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--ink-2);overflow:hidden;box-shadow:var(--shadow);width:100%}
+.stepper button{width:52px;min-width:52px;height:52px;min-height:52px;font-size:1.4em;color:var(--jade);flex:none;font-weight:600;flex-shrink:0}
 .stepper button:active{background:var(--jade-soft)}
-.stepper input{flex:1;min-width:0;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:700;font-size:1.35em;padding:0;min-width:2.5em}
+.stepper input{flex:1;min-width:3em;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:700;font-size:1.35em;padding:0}
 .stepper input:focus{outline:none;color:var(--jade)}
 .hint{font-size:.85em;color:var(--muted);margin-top:7px;line-height:1.5}
 .sublbl{font-size:.72em;color:var(--muted);margin-bottom:5px;font-weight:600}
@@ -263,6 +263,21 @@ h2:first-child{margin-top:0}
 .searchbar .ic:active{background:var(--jade-soft)}
 .searchbar .ic.rec{background:var(--red);}.searchbar .ic.rec svg{stroke:#fff}
 .searchbar .ic.on{background:var(--jade-soft)}
+/* per-ayah inline player */
+.ayah-play{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.ayah-playbtn{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;
+  background:var(--jade);border:none;flex:none;box-shadow:var(--shadow);transition:transform .1s}
+.ayah-playbtn:active{transform:scale(.92)}
+.ayah-playbtn svg{width:18px;height:18px;fill:#fff}
+.ayah-playbtn.playing{background:var(--red)}
+.rep-chips{display:flex;gap:6px}
+.rep-chip{padding:8px 14px;border-radius:20px;font-size:.82em;font-weight:700;background:var(--ink-3);
+  border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.rep-chip.active{background:var(--jade);color:#fff;border-color:var(--jade)}
+.rep-chip:active{transform:scale(.95)}
+.ayah-prog{flex:1;height:4px;background:var(--ink-3);border-radius:2px;overflow:hidden;min-width:30px}
+.ayah-progfill{height:100%;width:0%;background:var(--jade);transition:width .3s linear}
+
 /* collapsed saved items — one line, expand on tap */
 .sitem{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
 .sitem-head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
@@ -732,8 +747,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v22';
-const BUILD   = '2026-08-08 12:00 UTC';
+const VERSION = 'v23';
+const BUILD   = '2026-08-08 14:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -767,7 +782,7 @@ const mmss = s => { s=Math.max(0,Math.round(s)); const m=Math.floor(s/60), sec=S
 const sName = n => { const s = SURAHS.find(x=>x.n===n); return s ? s.en : 'Surah '+n; };
 const ascii = s => s.replace(/[^\x20-\x7E]/g,'').replace(/[\/\\:*?"<>|]/g,'-').replace(/\s+/g,' ').trim();
 
-const DEF = {qari:'Husary_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
+const DEF = {qari:'Alafasy_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
              wake:false, asz:34, uisz:19, rep:3, rng:5, sd:20, surah:1, from:1, to:7,
              sgap:1, sgapmode:'none', lyrics:true};
 const LS = {
@@ -807,6 +822,11 @@ if(!LS.get('gapmig6',false)){
 if(!LS.get('bump12',false)){
   if(!(S.uisz > 17)) S.uisz = DEF.uisz;
   saveS(); LS.set('bump12',true);
+}
+// v23: switch default reciter to Alafasy for new installs and those still on Husary default.
+if(!LS.get('bump23',false)){
+  if(S.qari==='Husary_128kbps') S.qari = DEF.qari;
+  saveS(); LS.set('bump23',true);
 }
 
 let SURAHS = [], TEXT = {}, BISM = '';
@@ -1300,7 +1320,7 @@ function prog(i,n){
   $('prepfill').style.width = ((i/n)*80)+'%';
   logProg(`Preparing audio ${i+1} of ${n}…`);
 }
-function prepStart(){ preparing=true; $('bar').hidden=false; $('prepbar').hidden=false;
+function prepStart(){ stopAyahPlayer(); preparing=true; $('bar').hidden=false; $('prepbar').hidden=false;
   $('exprow').hidden=true; $('phase').textContent='Preparing'; $('phase').className='p-prep'; }
 function prepEnd(){ preparing=false; $('prepfill').style.width='100%';
   setTimeout(()=>{ $('prepbar').hidden=true; $('prepfill').style.width='0'; },350); }
@@ -2076,13 +2096,75 @@ function setVtext(el, rawText, query){
 }
 let lastQuery=''; // persists so back-to-results restores the highlighted view
 // A verse row used in both the reader and results list.
+/* ---- per-ayah inline player ---- */
+// One audio element shared across all per-ayah plays — only one at a time.
+let ayahAudio = null, ayahAbort = null;
+function stopAyahPlayer(){
+  if(ayahAbort) ayahAbort();
+  ayahAbort = null;
+  if(ayahAudio){ try{ayahAudio.pause();}catch(e){} ayahAudio = null; }
+  document.querySelectorAll('.ayah-playbtn.playing').forEach(b=>b.classList.remove('playing'));
+  document.querySelectorAll('.ayah-progfill').forEach(f=>{ f.style.width='0%'; });
+}
+async function playAyahReps(s, a, reps, btn, progFill){
+  stopAyahPlayer();                    // stop any currently playing
+  const url = audioURL(S.qari, s, a);
+  const audio = new Audio();
+  ayahAudio = audio;
+  let cancelled = false;
+  ayahAbort = ()=>{ cancelled=true; try{audio.pause();}catch(e){} };
+  btn.classList.add('playing');
+  // Update progress across all reps: each rep is 1/reps of the total.
+  let repsDone = 0;
+  const tick = ()=>{
+    if(!audio.duration||cancelled) return;
+    const within = audio.currentTime/audio.duration;
+    const overall = (repsDone + within)/reps;
+    progFill.style.width=(overall*100).toFixed(1)+'%';
+  };
+  const tickId = setInterval(tick, 200);
+  audio.src = url;
+  try{
+    for(let i=0;i<reps;i++){
+      if(cancelled) break;
+      repsDone = i;
+      audio.currentTime = 0;
+      await audio.play();
+      await new Promise((res,rej)=>{
+        audio.onended = res;
+        audio.onerror = rej;
+        ayahAbort = ()=>{ cancelled=true; audio.pause(); rej(new Error('stopped')); };
+      });
+    }
+    progFill.style.width='100%';
+    setTimeout(()=>{ progFill.style.width='0%'; },600);
+  }catch(e){ /* stopped or error — silent */ }
+  clearInterval(tickId);
+  if(!cancelled) btn.classList.remove('playing');
+  ayahAudio = null; ayahAbort = null;
+}
+
 function verseRowEl(s, a, text, showRef, query){
   const d = document.createElement('div'); d.className='vrow'; d.dataset.s=s; d.dataset.a=a;
+  // Play control only in reader (not in search results where rows are tappable to navigate)
+  const playHtml = !showRef ? `
+    <div class="ayah-play">
+      <button class="ayah-playbtn" title="Play this ayah">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="rep-chips">
+        <button class="rep-chip" data-r="1">1×</button>
+        <button class="rep-chip" data-r="3">3×</button>
+        <button class="rep-chip" data-r="5">5×</button>
+      </div>
+      <div class="ayah-prog"><div class="ayah-progfill"></div></div>
+    </div>` : '';
   d.innerHTML = `<div class="vtext"></div>
     <div class="vref"><span class="r"></span>
       <button class="cp">Copy</button>
       <button class="sv">Save</button>
-      <button class="bkbtn" title="Bookmark">🔖</button></div>`;
+      <button class="bkbtn" title="Bookmark">🔖</button></div>
+    ${playHtml}`;
   setVtext(d.querySelector('.vtext'), text, query||'');
   d.querySelector('.r').textContent = showRef ? verseRef(s,a) : `Ayah ${a}`;
   const svBtn = d.querySelector('.sv');
@@ -2094,7 +2176,25 @@ function verseRowEl(s, a, text, showRef, query){
   svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paintSv(); };
   bkBtn.onclick = e=>{ e.stopPropagation(); toggleBookmark(s,a,text); paintBk();
     renderBookmarks && setTimeout(renderBookmarks,0); };
-  // auto last-read on scroll into view (reader only, not results)
+  // per-ayah play controls (reader only)
+  if(!showRef){
+    const playBtn = d.querySelector('.ayah-playbtn');
+    const progFill = d.querySelector('.ayah-progfill');
+    const chips = d.querySelectorAll('.rep-chip');
+    let selectedReps = 1;
+    chips.forEach(c=>{
+      c.onclick = e=>{ e.stopPropagation();
+        chips.forEach(x=>x.classList.remove('active')); c.classList.add('active');
+        selectedReps = +c.dataset.r;
+        playAyahReps(s, a, selectedReps, playBtn, progFill);
+      };
+    });
+    playBtn.onclick = e=>{ e.stopPropagation();
+      if(playBtn.classList.contains('playing')){ stopAyahPlayer(); return; }
+      playAyahReps(s, a, selectedReps, playBtn, progFill);
+    };
+  }
+  // auto last-read on scroll into view (reader only)
   if(!showRef && 'IntersectionObserver' in window){
     const obs=new IntersectionObserver(([en])=>{ if(en.isIntersecting) updateLastRead(s,a); },{threshold:.5});
     obs.observe(d);
