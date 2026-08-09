@@ -266,7 +266,7 @@ h2:first-child{margin-top:0}
 /* per-ayah inline player */
 .ayah-play{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .ayah-playbtn{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;
-  background:var(--jade);border:none;flex:none;box-shadow:var(--shadow);transition:transform .1s}
+  background:var(--jade);border:none;flex:none;box-shadow:var(--shadow);transition:background .15s,transform .1s}
 .ayah-playbtn:active{transform:scale(.92)}
 .ayah-playbtn svg{width:18px;height:18px;fill:#fff}
 .ayah-playbtn.playing{background:var(--red)}
@@ -277,6 +277,18 @@ h2:first-child{margin-top:0}
 .rep-chip:active{transform:scale(.95)}
 .ayah-prog{flex:1;height:4px;background:var(--ink-3);border-radius:2px;overflow:hidden;min-width:30px}
 .ayah-progfill{height:100%;width:0%;background:var(--jade);transition:width .3s linear}
+/* fixed now-playing bar */
+#nowbar{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  bottom:calc(var(--navh) + env(safe-area-inset-bottom));z-index:22;
+  background:var(--parchment);color:#fff;
+  display:flex;align-items:center;gap:10px;padding:10px var(--pad);
+  box-shadow:0 -2px 12px rgba(20,40,40,.18);cursor:pointer}
+#nowbar[hidden]{display:none}
+#nowbar .nbinfo{flex:1;min-width:0}
+#nowbar .nbref{font-size:.88em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nowbar .nbrep{font-size:.75em;opacity:.75;margin-top:1px}
+#nowbar .nbstop{background:#fff;color:var(--parchment);font-weight:700;padding:8px 16px;
+  border-radius:20px;white-space:nowrap;flex:none;font-size:.85em}
 
 /* collapsed saved items — one line, expand on tap */
 .sitem{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
@@ -292,8 +304,10 @@ h2:first-child{margin-top:0}
 .sitem-body .vtext{direction:rtl;text-align:right;font-family:var(--arabic);font-size:calc(var(--asz,34px)*.82);line-height:2.2;padding:12px 0 10px}
 .sitem-acts{display:flex;gap:8px;flex-wrap:wrap}
 .sitem-acts button{padding:9px 14px;border-radius:9px;font-size:.82em;font-weight:600}
-.bkbtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:var(--ink-3);border:1px solid var(--line);flex:none;font-size:1em}
+.bkbtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:var(--ink-3);border:1px solid var(--line);flex:none}
+.bkbtn svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;transition:stroke .15s,fill .15s}
 .bkbtn.on{background:var(--gold-soft);border-color:var(--gold)}
+.bkbtn.on svg{stroke:var(--gold);fill:var(--gold)}
 /* search bar collapse */
 #qcollapse{font-size:1.2em;color:var(--muted);width:40px;height:40px}
 .kbdic{font-family:var(--arabic);font-size:1.6em;font-weight:700;color:var(--jade);
@@ -359,6 +373,14 @@ h2:first-child{margin-top:0}
     <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
   <span id="ctxbarlabel">Reading</span>
+</div>
+
+<div id="nowbar" hidden>
+  <div class="nbinfo">
+    <div class="nbref" id="nbref">—</div>
+    <div class="nbrep" id="nbrep"></div>
+  </div>
+  <button class="nbstop" id="nbstop">■ Stop</button>
 </div>
 
 <main>
@@ -747,8 +769,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v23';
-const BUILD   = '2026-08-08 14:00 UTC';
+const VERSION = 'v24';
+const BUILD   = '2026-08-09 08:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1897,7 +1919,7 @@ function tab(id){
   const navMap = {drl:playerBack, sav:'more', set:'more', gde:'more'};
   navHi(navMap[id] || id);
   if(id==='rd'){ ensureReadTab(); updateContinueChip(); }
-  else{ $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; }
+  else{ $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; stopAyahPlayer(); }
   if(id==='sav'){ renderBookmarks(); renderVerses(); renderLists(); renderRecipes(); }
   if(id==='stc') renderBlocks();
   if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
@@ -2097,73 +2119,154 @@ function setVtext(el, rawText, query){
 let lastQuery=''; // persists so back-to-results restores the highlighted view
 // A verse row used in both the reader and results list.
 /* ---- per-ayah inline player ---- */
-// One audio element shared across all per-ayah plays — only one at a time.
 let ayahAudio = null, ayahAbort = null;
+let autoPlaying = false, autoSurah = 0, autoAyah = 0, autoReps = 2;
+let userScrolled = false, scrollResumeTimer = null;
+const SCROLL_PAUSE_MS = 3000;
+
+// SVGs for play/stop icon swap
+const PLAY_SVG = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+const STOP_SVG = `<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>`;
+
+function setPlayBtn(btn, playing){
+  btn.innerHTML = playing ? STOP_SVG : PLAY_SVG;
+  btn.classList.toggle('playing', playing);
+}
+
+function scrollToAyah(s, a, instant){
+  const el = document.querySelector(`.vrow[data-s="${s}"][data-a="${a}"]`);
+  const main = document.querySelector('main');
+  if(!el || !main) return;
+  // 30% from top
+  const top = el.offsetTop - main.clientHeight * 0.30;
+  main.scrollTo({top: Math.max(0, top), behavior: instant ? 'instant' : 'smooth'});
+}
+
+function updateNowBar(s, a, repI, totalReps, auto){
+  const ref = `${sName(s)} · Ayah ${a}`;
+  const rep = auto
+    ? `Auto-play · rep ${repI} of ${totalReps} · tap bar to return here`
+    : `Rep ${repI} of ${totalReps}`;
+  $('nbref').textContent = ref;
+  $('nbrep').textContent = rep;
+  $('nowbar').hidden = false;
+}
+
+function hideNowBar(){ $('nowbar').hidden = true; }
+
 function stopAyahPlayer(){
   if(ayahAbort) ayahAbort();
-  ayahAbort = null;
-  if(ayahAudio){ try{ayahAudio.pause();}catch(e){} ayahAudio = null; }
-  document.querySelectorAll('.ayah-playbtn.playing').forEach(b=>b.classList.remove('playing'));
+  ayahAbort = null; ayahAudio = null;
+  autoPlaying = false;
+  document.querySelectorAll('.ayah-playbtn').forEach(b=>setPlayBtn(b, false));
   document.querySelectorAll('.ayah-progfill').forEach(f=>{ f.style.width='0%'; });
+  hideNowBar();
+  clearTimeout(scrollResumeTimer);
 }
-async function playAyahReps(s, a, reps, btn, progFill){
-  stopAyahPlayer();                    // stop any currently playing
+
+function onUserScroll(){
+  userScrolled = true;
+  clearTimeout(scrollResumeTimer);
+  scrollResumeTimer = setTimeout(()=>{
+    userScrolled = false;
+    // resume scroll to current playing ayah
+    if(autoPlaying) scrollToAyah(autoSurah, autoAyah, false);
+  }, SCROLL_PAUSE_MS);
+}
+
+async function playAyahReps(s, a, reps, btn, progFill, auto){
+  // stop any previous
+  if(ayahAbort){ ayahAbort(); await new Promise(r=>setTimeout(r,50)); }
   const url = audioURL(S.qari, s, a);
   const audio = new Audio();
-  ayahAudio = audio;
+  ayahAudio = audio; audio.src = url;
+  autoSurah = s; autoAyah = a;
   let cancelled = false;
-  ayahAbort = ()=>{ cancelled=true; try{audio.pause();}catch(e){} };
-  btn.classList.add('playing');
-  // Update progress across all reps: each rep is 1/reps of the total.
-  let repsDone = 0;
-  const tick = ()=>{
-    if(!audio.duration||cancelled) return;
-    const within = audio.currentTime/audio.duration;
-    const overall = (repsDone + within)/reps;
-    progFill.style.width=(overall*100).toFixed(1)+'%';
-  };
-  const tickId = setInterval(tick, 200);
-  audio.src = url;
+  ayahAbort = ()=>{ cancelled=true; try{audio.pause();}catch(e){}};
+
+  // show play state
+  document.querySelectorAll('.ayah-playbtn').forEach(b=>setPlayBtn(b, false));
+  setPlayBtn(btn, true);
+  if(progFill) progFill.style.width='0%';
+
+  // scroll to the ayah (unless user is manually scrolling)
+  if(!userScrolled) scrollToAyah(s, a, false);
+
+  let tickId;
   try{
-    for(let i=0;i<reps;i++){
+    for(let i=1; i<=reps; i++){
       if(cancelled) break;
-      repsDone = i;
+      updateNowBar(s, a, i, reps, auto);
+      if(progFill){
+        const startFrac = (i-1)/reps;
+        tickId = setInterval(()=>{
+          if(!audio.duration||cancelled){ clearInterval(tickId); return; }
+          const within = audio.currentTime/audio.duration;
+          progFill.style.width=((startFrac+within/reps)*100).toFixed(1)+'%';
+        }, 200);
+      }
       audio.currentTime = 0;
       await audio.play();
       await new Promise((res,rej)=>{
         audio.onended = res;
         audio.onerror = rej;
-        ayahAbort = ()=>{ cancelled=true; audio.pause(); rej(new Error('stopped')); };
+        const prev = ayahAbort;
+        ayahAbort = ()=>{ cancelled=true; audio.pause(); rej(new Error('stopped')); prev&&prev(); };
       });
+      clearInterval(tickId);
     }
-    progFill.style.width='100%';
-    setTimeout(()=>{ progFill.style.width='0%'; },600);
-  }catch(e){ /* stopped or error — silent */ }
-  clearInterval(tickId);
-  if(!cancelled) btn.classList.remove('playing');
-  ayahAudio = null; ayahAbort = null;
+    if(progFill && !cancelled){ progFill.style.width='100%';
+      setTimeout(()=>{ if(progFill) progFill.style.width='0%'; },500); }
+  }catch(e){ clearInterval(tickId); }
+
+  setPlayBtn(btn, false);
+  ayahAudio = null;
+  return !cancelled;
+}
+
+async function autoPlayFrom(s, startA, reps){
+  autoPlaying = true;
+  autoReps = reps;
+  const ayat = TEXT[s]||[];
+  for(let i=0; i<ayat.length; i++){
+    const ay = ayat[i];
+    if(ay.n < startA) continue;
+    if(!autoPlaying) break;
+    autoSurah = s; autoAyah = ay.n;
+    // find the row element for this ayah
+    const row = document.querySelector(`.vrow[data-s="${s}"][data-a="${ay.n}"]`);
+    const btn = row?.querySelector('.ayah-playbtn');
+    const pf  = row?.querySelector('.ayah-progfill');
+    const ok = await playAyahReps(s, ay.n, reps, btn||document.createElement('button'), pf, true);
+    if(!ok || !autoPlaying) break;
+    if(i===ayat.length-1){
+      toast(`${sName(s)} — complete`);
+      autoPlaying=false;
+    }
+  }
+  if(!autoPlaying) return;
+  autoPlaying=false; hideNowBar();
 }
 
 function verseRowEl(s, a, text, showRef, query){
   const d = document.createElement('div'); d.className='vrow'; d.dataset.s=s; d.dataset.a=a;
-  // Play control only in reader (not in search results where rows are tappable to navigate)
   const playHtml = !showRef ? `
     <div class="ayah-play">
-      <button class="ayah-playbtn" title="Play this ayah">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-      </button>
+      <button class="ayah-playbtn" title="Play">${PLAY_SVG}</button>
       <div class="rep-chips">
-        <button class="rep-chip" data-r="1">1×</button>
+        <button class="rep-chip" data-r="2">2×</button>
         <button class="rep-chip" data-r="3">3×</button>
-        <button class="rep-chip" data-r="5">5×</button>
+        <button class="rep-chip" data-r="auto">Auto</button>
       </div>
       <div class="ayah-prog"><div class="ayah-progfill"></div></div>
     </div>` : '';
+  // SVG bookmark icon — fills amber when active
+  const bkSvg = `<svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   d.innerHTML = `<div class="vtext"></div>
     <div class="vref"><span class="r"></span>
       <button class="cp">Copy</button>
       <button class="sv">Save</button>
-      <button class="bkbtn" title="Bookmark">🔖</button></div>
+      <button class="bkbtn" title="Bookmark">${bkSvg}</button></div>
     ${playHtml}`;
   setVtext(d.querySelector('.vtext'), text, query||'');
   d.querySelector('.r').textContent = showRef ? verseRef(s,a) : `Ayah ${a}`;
@@ -2176,27 +2279,39 @@ function verseRowEl(s, a, text, showRef, query){
   svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paintSv(); };
   bkBtn.onclick = e=>{ e.stopPropagation(); toggleBookmark(s,a,text); paintBk();
     renderBookmarks && setTimeout(renderBookmarks,0); };
-  // per-ayah play controls (reader only)
   if(!showRef){
-    const playBtn = d.querySelector('.ayah-playbtn');
+    const playBtn  = d.querySelector('.ayah-playbtn');
     const progFill = d.querySelector('.ayah-progfill');
-    const chips = d.querySelectorAll('.rep-chip');
-    let selectedReps = 1;
+    const chips    = d.querySelectorAll('.rep-chip');
+    let selReps = 2;
+    function startPlay(reps, isAuto){
+      if(isAuto){
+        autoPlaying = true;
+        autoPlayFrom(s, a, selReps);
+      } else {
+        autoPlaying = false;
+        playAyahReps(s, a, reps, playBtn, progFill, false);
+      }
+    }
     chips.forEach(c=>{
       c.onclick = e=>{ e.stopPropagation();
         chips.forEach(x=>x.classList.remove('active')); c.classList.add('active');
-        selectedReps = +c.dataset.r;
-        playAyahReps(s, a, selectedReps, playBtn, progFill);
+        if(c.dataset.r==='auto'){ startPlay(selReps, true); }
+        else { selReps=+c.dataset.r; startPlay(selReps, false); }
       };
     });
     playBtn.onclick = e=>{ e.stopPropagation();
-      if(playBtn.classList.contains('playing')){ stopAyahPlayer(); return; }
-      playAyahReps(s, a, selectedReps, playBtn, progFill);
+      if(playBtn.classList.contains('playing') || autoPlaying){ stopAyahPlayer(); return; }
+      startPlay(selReps, false);
     };
   }
-  // auto last-read on scroll into view (reader only)
+  // debounced last-read: only update after being visible for 800ms (skip first render)
   if(!showRef && 'IntersectionObserver' in window){
-    const obs=new IntersectionObserver(([en])=>{ if(en.isIntersecting) updateLastRead(s,a); },{threshold:.5});
+    let lrTimer = null;
+    const obs = new IntersectionObserver(([en])=>{
+      if(en.isIntersecting){ lrTimer=setTimeout(()=>updateLastRead(s,a), 800); }
+      else { clearTimeout(lrTimer); }
+    },{threshold:.6});
     obs.observe(d);
   }
   if(showRef){ d.dataset.clickable='1'; d.onclick=e=>{ if(e.target.tagName!=='BUTTON') openInContext(s,a,text,query); }; }
@@ -2419,6 +2534,11 @@ function boot(){
   $('continuebtn').onclick = ()=>{ if(LASTREAD){
     const arr=TEXT[LASTREAD.s]||[]; const ay=arr.find(a=>a.n===LASTREAD.a);
     openInContext(LASTREAD.s,LASTREAD.a,ay?.text||'',''); }};
+  // now-playing bar
+  $('nbstop').onclick = e=>{ e.stopPropagation(); stopAyahPlayer(); };
+  $('nowbar').onclick = ()=>{ if(autoSurah&&autoAyah) scrollToAyah(autoSurah,autoAyah,false); };
+  // detect manual scroll to pause auto-scroll
+  document.querySelector('main').addEventListener('scroll', onUserScroll, {passive:true});
   // version in header
   if($('hdrver')) $('hdrver').textContent=VERSION;
   // ctx back
