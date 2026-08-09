@@ -387,7 +387,7 @@ h2:first-child{margin-top:0}
 <main>
 
 <!-- ================= READ + SEARCH ================= -->
-<section class="panel" id="p-rd" hidden>
+<section class="panel" id="p-rd">
   <div class="searchwrap collapsed" id="searchwrap">
     <div class="searchpill" id="searchpill">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -433,7 +433,7 @@ h2:first-child{margin-top:0}
     <div id="ctxtext"></div>
   </div>
 </section>
-<section class="panel" id="p-sel">
+<section class="panel" id="p-sel" hidden>
   <div class="field">
     <label class="lbl" for="sfilter">Surah</label>
     <input class="ctl" id="sfilter" type="search" inputmode="search" autocomplete="off"
@@ -738,11 +738,11 @@ h2:first-child{margin-top:0}
 <div id="toast"></div>
 
 <nav id="nav" role="tablist">
-  <button role="tab" data-tab="rd" aria-selected="false">
+  <button role="tab" data-tab="rd" aria-selected="true">
     <svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h5a2 2 0 012 2v15a2 2 0 00-2-2H3z"/><path d="M21 5a2 2 0 00-2-2h-5a2 2 0 00-2 2v15a2 2 0 012-2h5z"/></svg>
     Read
   </button>
-  <button role="tab" data-tab="sel" aria-selected="true">
+  <button role="tab" data-tab="sel" aria-selected="false">
     <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 8h6M8 12h8M8 16h5"/></svg>
     Memorize
   </button>
@@ -770,8 +770,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v25';
-const BUILD   = '2026-08-09 10:00 UTC';
+const VERSION = 'v26';
+const BUILD   = '2026-08-09 11:30 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1927,12 +1927,22 @@ function tab(id){
   document.querySelector('main').scrollTop = 0;
 }
 let readReady = false;
+let readTabScrolled = false;   // true after first manual scroll — guards last-read tracking
 function ensureReadTab(){
   if(readReady || !SURAHS.length) return; readReady = true;
   const sel = $('rdsurah');
   sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
+  // Open at last-read position if one exists; otherwise Al-Fatiha
+  const target = LASTREAD || {s:1, a:1};
+  rdSurah = target.s;
   sel.value = rdSurah;
-  loadSurah(rdSurah).then(()=>renderReadSurah(rdSurah)).catch(()=>{});
+  loadSurah(rdSurah).then(()=>{
+    renderReadSurah(rdSurah);
+    // Scroll to last-read ayah after a short render delay
+    if(LASTREAD && LASTREAD.a > 1){
+      setTimeout(()=> scrollToAyah(LASTREAD.s, LASTREAD.a, true), 120);
+    }
+  }).catch(()=>{});
 }
 // Show the now-playing view, remembering where its back arrow returns to.
 function showPlayer(origin){ playerBack = origin || 'sel'; tab('drl'); }
@@ -2037,7 +2047,10 @@ function toggleBookmark(s,a,text){
   else { BOOKMARKS.unshift({s,a,text}); toast('Bookmarked'); }
   saveBK(); return true;
 }
-function updateLastRead(s,a){ LASTREAD={s,a}; saveLR(); updateContinueChip(); }
+function updateLastRead(s,a){
+  if(!readTabScrolled) return;   // ignore initial render — only track real scrolling
+  LASTREAD={s,a}; saveLR(); updateContinueChip();
+}
 function updateContinueChip(){
   if(!LASTREAD||!SURAHS.length){ $('continuechip').hidden=true; return; }
   $('continuechip').hidden=false;
@@ -2046,7 +2059,7 @@ function updateContinueChip(){
 
 let rdSurah = 1;
 function renderReadSurah(n){
-  rdSurah = n;
+  rdSurah = n; readTabScrolled = false;   // reset scroll tracking for new surah
   const box = $('rdtext'); box.innerHTML='';
   const arr = TEXT[n];
   if(!arr){ box.innerHTML = '<div class="empty">Loading…</div>'; return; }
@@ -2183,11 +2196,11 @@ function stopAyahPlayer(){
 }
 
 function onUserScroll(){
+  readTabScrolled = true;   // first scroll = user is genuinely reading
   userScrolled = true;
   clearTimeout(scrollResumeTimer);
   scrollResumeTimer = setTimeout(()=>{
     userScrolled = false;
-    // resume scroll to current playing ayah
     if(autoPlaying) scrollToAyah(autoSurah, autoAyah, false);
   }, SCROLL_PAUSE_MS);
 }
@@ -2761,6 +2774,8 @@ function initUpdates(){
     try{ await loadSurah(S.surah); }catch(e){}
     for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
     budget(); renderBlocks();
+    // Read is the default tab — init it now that SURAHS are loaded
+    ensureReadTab(); updateContinueChip();
   }catch(e){
     $('surah').innerHTML = '<option>Could not load</option>';
     $('bnote').textContent = 'Could not reach the text source. Connect once, then it works offline.';
