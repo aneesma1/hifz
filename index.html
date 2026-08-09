@@ -275,6 +275,7 @@ h2:first-child{margin-top:0}
   border:1px solid var(--line);color:var(--muted);cursor:pointer}
 .rep-chip.active{background:var(--jade);color:#fff;border-color:var(--jade)}
 .rep-chip:active{transform:scale(.95)}
+.flow-hint{font-size:.76em;color:var(--jade);margin-top:6px;padding-left:2px;font-weight:600}
 .ayah-prog{flex:1;height:4px;background:var(--ink-3);border-radius:2px;overflow:hidden;min-width:30px}
 .ayah-progfill{height:100%;width:0%;background:var(--jade);transition:width .3s linear}
 /* fixed now-playing bar */
@@ -769,8 +770,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v24';
-const BUILD   = '2026-08-09 08:00 UTC';
+const VERSION = 'v25';
+const BUILD   = '2026-08-09 10:00 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -2120,13 +2121,29 @@ let lastQuery=''; // persists so back-to-results restores the highlighted view
 // A verse row used in both the reader and results list.
 /* ---- per-ayah inline player ---- */
 let ayahAudio = null, ayahAbort = null;
-let autoPlaying = false, autoSurah = 0, autoAyah = 0, autoReps = 2;
+let autoPlaying = false, autoSurah = 0, autoAyah = 0, autoReps = 1;
+// Global chip state — shared across all ayah rows so they always agree
+let globalReps = 1, globalFlow = false;
 let userScrolled = false, scrollResumeTimer = null;
 const SCROLL_PAUSE_MS = 3000;
 
 // SVGs for play/stop icon swap
 const PLAY_SVG = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
 const STOP_SVG = `<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>`;
+
+// Repaint ALL chip sets in the document to reflect global state.
+// This ensures tapping one row's chip updates every other row too.
+function repaintAllChips(){
+  document.querySelectorAll('.rep-chip').forEach(c=>{
+    const isFlow = c.dataset.r==='flow';
+    const isRep  = !isFlow && +c.dataset.r===globalReps;
+    c.classList.toggle('active', globalFlow ? isFlow : isRep);
+  });
+  // helper text: show under all ayah-play rows when flow is active
+  document.querySelectorAll('.flow-hint').forEach(el=>{
+    el.hidden = !globalFlow;
+  });
+}
 
 function setPlayBtn(btn, playing){
   btn.innerHTML = playing ? STOP_SVG : PLAY_SVG;
@@ -2145,7 +2162,7 @@ function scrollToAyah(s, a, instant){
 function updateNowBar(s, a, repI, totalReps, auto){
   const ref = `${sName(s)} · Ayah ${a}`;
   const rep = auto
-    ? `Auto-play · rep ${repI} of ${totalReps} · tap bar to return here`
+    ? `Flow · rep ${repI} of ${totalReps} each · tap bar to return`
     : `Rep ${repI} of ${totalReps}`;
   $('nbref').textContent = ref;
   $('nbrep').textContent = rep;
@@ -2157,9 +2174,10 @@ function hideNowBar(){ $('nowbar').hidden = true; }
 function stopAyahPlayer(){
   if(ayahAbort) ayahAbort();
   ayahAbort = null; ayahAudio = null;
-  autoPlaying = false;
+  autoPlaying = false; globalFlow = false;
   document.querySelectorAll('.ayah-playbtn').forEach(b=>setPlayBtn(b, false));
   document.querySelectorAll('.ayah-progfill').forEach(f=>{ f.style.width='0%'; });
+  repaintAllChips();
   hideNowBar();
   clearTimeout(scrollResumeTimer);
 }
@@ -2245,7 +2263,7 @@ async function autoPlayFrom(s, startA, reps){
     }
   }
   if(!autoPlaying) return;
-  autoPlaying=false; hideNowBar();
+  autoPlaying=false; globalFlow=false; repaintAllChips(); hideNowBar();
 }
 
 function verseRowEl(s, a, text, showRef, query){
@@ -2254,12 +2272,13 @@ function verseRowEl(s, a, text, showRef, query){
     <div class="ayah-play">
       <button class="ayah-playbtn" title="Play">${PLAY_SVG}</button>
       <div class="rep-chips">
-        <button class="rep-chip" data-r="2">2×</button>
+        <button class="rep-chip" data-r="1">1×</button>
         <button class="rep-chip" data-r="3">3×</button>
-        <button class="rep-chip" data-r="auto">Auto</button>
+        <button class="rep-chip" data-r="flow">Flow</button>
       </div>
       <div class="ayah-prog"><div class="ayah-progfill"></div></div>
-    </div>` : '';
+    </div>
+    <div class="flow-hint" hidden>Continuous play — surah flows from here · tap Stop to end</div>` : '';
   // SVG bookmark icon — fills amber when active
   const bkSvg = `<svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   d.innerHTML = `<div class="vtext"></div>
@@ -2283,26 +2302,31 @@ function verseRowEl(s, a, text, showRef, query){
     const playBtn  = d.querySelector('.ayah-playbtn');
     const progFill = d.querySelector('.ayah-progfill');
     const chips    = d.querySelectorAll('.rep-chip');
-    let selReps = 2;
-    function startPlay(reps, isAuto){
-      if(isAuto){
-        autoPlaying = true;
-        autoPlayFrom(s, a, selReps);
+    // paint this row's chips to match current global state
+    chips.forEach(c=>{
+      const isFlow = c.dataset.r==='flow';
+      c.classList.toggle('active', globalFlow ? isFlow : (!isFlow && +c.dataset.r===globalReps));
+    });
+    function startPlay(isFlow){
+      if(isFlow){
+        globalFlow = true; autoPlaying = true;
+        repaintAllChips();
+        autoPlayFrom(s, a, globalReps);
       } else {
-        autoPlaying = false;
-        playAyahReps(s, a, reps, playBtn, progFill, false);
+        globalFlow = false; autoPlaying = false;
+        repaintAllChips();
+        playAyahReps(s, a, globalReps, playBtn, progFill, false);
       }
     }
     chips.forEach(c=>{
       c.onclick = e=>{ e.stopPropagation();
-        chips.forEach(x=>x.classList.remove('active')); c.classList.add('active');
-        if(c.dataset.r==='auto'){ startPlay(selReps, true); }
-        else { selReps=+c.dataset.r; startPlay(selReps, false); }
+        if(c.dataset.r==='flow'){ startPlay(true); }
+        else { globalReps=+c.dataset.r; globalFlow=false; repaintAllChips(); startPlay(false); }
       };
     });
     playBtn.onclick = e=>{ e.stopPropagation();
       if(playBtn.classList.contains('playing') || autoPlaying){ stopAyahPlayer(); return; }
-      startPlay(selReps, false);
+      startPlay(globalFlow);
     };
   }
   // debounced last-read: only update after being visible for 800ms (skip first render)
