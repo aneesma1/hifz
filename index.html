@@ -156,6 +156,9 @@ h2:first-child{margin-top:0}
   display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
 .card .g{flex:1;min-width:0}.card b{display:block;font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card small{color:var(--muted);font-size:.85em}
+.card-toprow{display:flex;align-items:baseline;gap:8px}
+.card-toprow b{flex:1;min-width:0}
+.card-ts{flex:none;font-size:.72em;color:var(--muted);opacity:.8;white-space:nowrap}
 .card .x{color:var(--red);font-size:1.4em;padding:6px 10px;flex:none;border-radius:8px}
 .card .x:active{background:var(--red-soft)}
 .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.9em;line-height:1.7}
@@ -296,7 +299,9 @@ h2:first-child{margin-top:0}
 .sitem-head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
 .sitem-head:active{background:var(--jade-soft)}
 .sitem-ref{flex:1;min-width:0}
-.sitem-ref b{display:block;font-size:.9em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sitem-toprow{display:flex;align-items:baseline;gap:8px}
+.sitem-ref b{display:block;font-size:.9em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.sitem-ts{flex:none;font-size:.72em;color:var(--muted);opacity:.8;white-space:nowrap}
 .sitem-ref small{display:block;font-size:.82em;color:var(--muted);direction:rtl;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--arabic)}
 .sitem-chev{flex:none;color:var(--muted);transition:transform .15s}
 .sitem.open .sitem-chev{transform:rotate(90deg)}
@@ -770,8 +775,8 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v26';
-const BUILD   = '2026-08-09 11:30 UTC';
+const VERSION = 'v27';
+const BUILD   = '2026-08-23 16:45 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -826,6 +831,13 @@ let BOOKMARKS = LS.get('bookmarks',[]);  // manual bookmarks: [{s,a,text,label}]
 const saveBK = () => LS.set('bookmarks',BOOKMARKS);
 let LASTREAD = LS.get('lastread',null);  // {s,a} auto last-read position
 const saveLR = () => LS.set('lastread',LASTREAD);
+// Saved-item timestamps: every new bookmark/verse/range/recipe gets ts:Date.now().
+// Older items saved before this existed simply have no ts — we don't fake one,
+// they just sort to the bottom and show no timestamp line.
+const fmtTS = ts => { if(!ts) return '';
+  const d=new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); };
+const byNewest = (a,b) => (b.ts||0)-(a.ts||0);
 if(!LS.get('bump4',false)){
   if(!(S.asz > 25)) S.asz = DEF.asz;              // only if never raised by hand
   if(typeof S.uisz !== 'number') S.uisz = DEF.uisz;
@@ -1761,10 +1773,11 @@ function renderLists(){
   const box=$('lists');
   if(!LISTS.length){ box.innerHTML=`<div class="empty">No saved ranges yet.</div>`; return; }
   box.innerHTML='';
-  LISTS.forEach((l,i)=>{
+  LISTS.slice().sort(byNewest).forEach(l=>{
     const d=document.createElement('div'); d.className='card';
-    d.innerHTML=`<div class="g"><b></b><small>${sName(l.surah)} ${l.from}–${l.to} · ${l.rep}× each · ${l.rng}× range</small></div><button class="x">×</button>`;
+    d.innerHTML=`<div class="g"><div class="card-toprow"><b></b><span class="card-ts"></span></div><small>${sName(l.surah)} ${l.from}–${l.to} · ${l.rep}× each · ${l.rng}× range</small></div><button class="x">×</button>`;
     d.querySelector('b').textContent=l.name;
+    d.querySelector('.card-ts').textContent=fmtTS(l.ts);
     d.querySelector('.g').onclick = async ()=>{
       $('surah').value=l.surah; fillAyat($('surah'),$('from'),$('to'),l.from,l.to);
       $('rep').value=l.rep; $('rng').value=l.rng; $('sd').value=l.sd||20;
@@ -1772,7 +1785,7 @@ function renderLists(){
       tab('sel'); toast(`Loaded “${l.name}”`);
     };
     d.querySelector('.x').onclick = e =>{ e.stopPropagation();
-      if(!confirm(`Delete “${l.name}”?`)) return; LISTS.splice(i,1); saveL(); renderLists(); };
+      if(!confirm(`Delete “${l.name}”?`)) return; LISTS.splice(LISTS.indexOf(l),1); saveL(); renderLists(); };
     box.appendChild(d);
   });
 }
@@ -1780,18 +1793,19 @@ function renderRecipes(){
   const box=$('recipes');
   if(!RECIPES.length){ box.innerHTML=`<div class="empty">No stitch recipes yet.</div>`; return; }
   box.innerHTML='';
-  RECIPES.forEach((rc,i)=>{
+  RECIPES.slice().sort(byNewest).forEach(rc=>{
     const ayat = rc.blocks.reduce((a,b)=>a+blockAyat(b),0);
     const d=document.createElement('div'); d.className='card';
-    d.innerHTML=`<div class="g"><b></b><small>${rc.blocks.length} block${rc.blocks.length>1?'s':''} · ${ayat} ayat</small></div><button class="x">×</button>`;
+    d.innerHTML=`<div class="g"><div class="card-toprow"><b></b><span class="card-ts"></span></div><small>${rc.blocks.length} block${rc.blocks.length>1?'s':''} · ${ayat} ayat</small></div><button class="x">×</button>`;
     d.querySelector('b').textContent=rc.name;
+    d.querySelector('.card-ts').textContent=fmtTS(rc.ts);
     d.querySelector('.g').onclick = async ()=>{
       BLOCKS = rc.blocks.map(b=>Object.assign({},b)); saveB(); renderBlocks();
       for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
       renderBlocks(); tab('stc'); toast(`Loaded “${rc.name}”`);
     };
     d.querySelector('.x').onclick = e =>{ e.stopPropagation();
-      if(!confirm(`Delete “${rc.name}”?`)) return; RECIPES.splice(i,1); saveR(); renderRecipes(); };
+      if(!confirm(`Delete “${rc.name}”?`)) return; RECIPES.splice(RECIPES.indexOf(rc),1); saveR(); renderRecipes(); };
     box.appendChild(d);
   });
 }
@@ -1799,14 +1813,14 @@ function saveRange(){
   const name=(prompt('Name this range:', `${sName(+$('surah').value)} ${$('from').value}–${$('to').value}`)||'').trim();
   if(!name) return;
   LISTS.push({name, surah:+$('surah').value, from:+$('from').value, to:+$('to').value,
-              rep:+$('rep').value, rng:+$('rng').value, sd:+$('sd').value});
+              rep:+$('rep').value, rng:+$('rng').value, sd:+$('sd').value, ts:Date.now()});
   saveL(); toast(`Saved “${name}”`);
 }
 function saveRecipe(){
   if(!BLOCKS.length) return toast('Add some blocks first');
   const name=(prompt('Name this recipe:', 'Morning revision')||'').trim();
   if(!name) return;
-  RECIPES.push({name, blocks:BLOCKS.map(b=>Object.assign({},b))}); saveR();
+  RECIPES.push({name, blocks:BLOCKS.map(b=>Object.assign({},b)), ts:Date.now()}); saveR();
   toast(`Saved “${name}”`);
 }
 function exportBackup(){
@@ -1827,26 +1841,26 @@ function importBackup(file){
         const seen = new Set(LISTS.map(l=>l.name+l.surah+l.from+l.to));
         inc.lists.forEach(l=>{ if(typeof l.surah!=='number') return;
           const k=l.name+l.surah+l.from+l.to; if(seen.has(k)) return;
-          seen.add(k); LISTS.push(l); n++; });
+          seen.add(k); if(!l.ts) l.ts=Date.now(); LISTS.push(l); n++; });
         saveL();
       }
       if(Array.isArray(inc.recipes)){
         const seen = new Set(RECIPES.map(x=>x.name));
         inc.recipes.forEach(x=>{ if(!Array.isArray(x.blocks) || seen.has(x.name)) return;
-          seen.add(x.name); RECIPES.push(x); n++; });
+          seen.add(x.name); if(!x.ts) x.ts=Date.now(); RECIPES.push(x); n++; });
         saveR();
       }
       if(Array.isArray(inc.blocks)){ BLOCKS = inc.blocks; saveB(); }
       if(Array.isArray(inc.bookmarks)){
         const seen=new Set(BOOKMARKS.map(b=>b.s+':'+b.a));
         inc.bookmarks.forEach(b=>{ if(typeof b.s!=='number') return; const k=b.s+':'+b.a;
-          if(seen.has(k)) return; seen.add(k); BOOKMARKS.push(b); });
+          if(seen.has(k)) return; seen.add(k); if(!b.ts) b.ts=Date.now(); BOOKMARKS.push(b); });
         saveBK();
       }
       if(Array.isArray(inc.verses)){
         const seen = new Set(VERSES.map(v=>v.s+':'+v.a));
         inc.verses.forEach(v=>{ if(typeof v.s!=='number') return; const k=v.s+':'+v.a;
-          if(seen.has(k)) return; seen.add(k); VERSES.push(v); n++; });
+          if(seen.has(k)) return; seen.add(k); if(!v.ts) v.ts=Date.now(); VERSES.push(v); n++; });
         saveV();
       }
       if(inc.settings && typeof inc.settings==='object'){ S = Object.assign({}, DEF, inc.settings); saveS(); }
@@ -2044,7 +2058,7 @@ function toggleBookmark(s,a,text){
   const i=BOOKMARKS.findIndex(b=>b.s===s&&b.a===a);
   if(i>=0){ BOOKMARKS.splice(i,1); toast('Bookmark removed'); }
   else if(BOOKMARKS.length>=10){ toast('Max 10 bookmarks — remove one first'); return false; }
-  else { BOOKMARKS.unshift({s,a,text}); toast('Bookmarked'); }
+  else { BOOKMARKS.unshift({s,a,text,ts:Date.now()}); toast('Bookmarked'); }
   saveBK(); return true;
 }
 function updateLastRead(s,a){
@@ -2357,7 +2371,7 @@ function verseRowEl(s, a, text, showRef, query){
 function toggleVerse(s,a,text){
   const i = VERSES.findIndex(v=>v.s===s && v.a===a);
   if(i>=0){ VERSES.splice(i,1); toast('Removed from saved'); }
-  else { VERSES.push({s,a,text}); toast('Saved for practice'); }
+  else { VERSES.push({s,a,text,ts:Date.now()}); toast('Saved for practice'); }
   saveV();
 }
 // Design A: nothing runs until Search is tapped.
@@ -2491,10 +2505,11 @@ function voiceSearch(){
   try{ recog.start(); }catch(e){ recstate=false; $('qmic').classList.remove('rec'); }
 }
 // Build a collapsed saved-item card (one line preview, expand on tap).
-function savedItemEl(ref, preview, actions, onOpen){
+function savedItemEl(ref, preview, actions, onOpen, ts){
   const d=document.createElement('div'); d.className='sitem';
-  d.innerHTML=`<div class="sitem-head"><div class="sitem-ref"><b></b><small></small></div><span class="sitem-chev">›</span></div><div class="sitem-body"><div class="vtext sitem-vtext"></div><div class="sitem-acts"></div></div>`;
+  d.innerHTML=`<div class="sitem-head"><div class="sitem-ref"><div class="sitem-toprow"><b></b><span class="sitem-ts"></span></div><small></small></div><span class="sitem-chev">›</span></div><div class="sitem-body"><div class="vtext sitem-vtext"></div><div class="sitem-acts"></div></div>`;
   d.querySelector('.sitem-ref b').textContent=ref;
+  d.querySelector('.sitem-ts').textContent=fmtTS(ts);
   d.querySelector('.sitem-ref small').textContent=preview;
   const body=d.querySelector('.sitem-body');
   const acts=d.querySelector('.sitem-acts');
@@ -2509,14 +2524,14 @@ function renderBookmarks(){
   const box=$('bookmarks');
   if(!BOOKMARKS.length){ box.innerHTML='<div class="empty">No bookmarks yet. Tap 🔖 on any ayah while reading.</div>'; return; }
   box.innerHTML='';
-  BOOKMARKS.forEach((b,i)=>{
+  BOOKMARKS.slice().sort(byNewest).forEach(b=>{
     const preview=b.text?b.text.slice(0,40)+'…':'';
     const d=savedItemEl(verseRef(b.s,b.a), preview, [
       {label:'Go to',cls:'pri',fn:()=>{ tab('rd'); openInContext(b.s,b.a,b.text,''); }},
       {label:'Copy',fn:()=>copyText(verseCopy(b.s,b.a,b.text),'Copied')},
-      {label:'Remove',cls:'dgr',fn:()=>{ BOOKMARKS.splice(i,1); saveBK(); renderBookmarks(); }}
+      {label:'Remove',cls:'dgr',fn:()=>{ BOOKMARKS.splice(BOOKMARKS.indexOf(b),1); saveBK(); renderBookmarks(); }}
     ], el=>{ el.querySelector('.sitem-vtext').textContent=b.text;
-             document.documentElement.style.setProperty('--asz',S.asz+'px'); });
+             document.documentElement.style.setProperty('--asz',S.asz+'px'); }, b.ts);
     box.appendChild(d);
   });
 }
@@ -2524,15 +2539,15 @@ function renderVerses(){
   const box=$('verses');
   if(!VERSES.length){ box.innerHTML='<div class="empty">No saved verses yet. Find some in the Read tab and tap Save.</div>'; return; }
   box.innerHTML='';
-  VERSES.forEach((v,i)=>{
+  VERSES.slice().sort(byNewest).forEach(v=>{
     const preview=v.text?v.text.slice(0,40)+'…':'';
     const d=savedItemEl(verseRef(v.s,v.a), preview, [
       {label:'Drill',cls:'pri',fn:()=>drillVerse(v)},
       {label:'Read',fn:()=>{ tab('rd'); openInContext(v.s,v.a,v.text,''); }},
       {label:'Copy',fn:()=>copyText(verseCopy(v.s,v.a,v.text),'Copied')},
-      {label:'Remove',cls:'dgr',fn:()=>{ VERSES.splice(i,1); saveV(); renderVerses(); }}
+      {label:'Remove',cls:'dgr',fn:()=>{ VERSES.splice(VERSES.indexOf(v),1); saveV(); renderVerses(); }}
     ], el=>{ el.querySelector('.sitem-vtext').textContent=v.text;
-             document.documentElement.style.setProperty('--asz',S.asz+'px'); });
+             document.documentElement.style.setProperty('--asz',S.asz+'px'); }, v.ts);
     box.appendChild(d);
   });
 }
