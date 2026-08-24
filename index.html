@@ -568,6 +568,19 @@ h2:first-child{margin-top:0}
   <button class="sublink" id="goGuide">User guide &amp; how-to
     <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
+
+  <h2 style="margin-top:26px">App</h2>
+  <a class="sublink" id="appLink" href="https://aneesma1.github.io/hifz/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;cursor:pointer">
+    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:2px">
+      <span>Hifz — Stacked Memorizer</span>
+      <small style="color:var(--muted);font-weight:400">aneesma1.github.io/hifz</small>
+    </span>
+    <svg viewBox="0 0 24 24"><path d="M7 17L17 7M7 7h10v10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="appCopy">Copy link</button>
+    <button class="btn" id="appShare">Share</button>
+  </div>
 </section>
 
 <!-- ================= SAVED ================= -->
@@ -775,8 +788,9 @@ h2:first-child{margin-top:0}
    there is nothing left to throttle or block.
    ========================================================================== */
 
-const VERSION = 'v27';
-const BUILD   = '2026-08-23 16:45 UTC';
+const APP_URL = 'https://aneesma1.github.io/hifz/';
+const VERSION = 'v28';
+const BUILD   = '2026-08-24 16:11 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -2571,6 +2585,10 @@ function boot(){
   $('goSaved').onclick = ()=>tab('sav');
   $('goSettings').onclick = ()=>tab('set');
   $('goGuide').onclick = ()=>tab('gde');
+  $('appCopy').onclick = ()=>copyText(APP_URL, 'Link copied');
+  $('appShare').onclick = ()=>copyText(
+    `Hifz — Stacked Memorizer\nA Qur\u2019an memorization app with stitched audio export.\n${APP_URL}`,
+    'Copied — paste it anywhere');
   // Read + search
   // search pill expand/collapse/reset
   function expandSearch(){ $('searchwrap').classList.remove('collapsed'); $('q').focus(); }
