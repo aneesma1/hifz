@@ -516,33 +516,38 @@ h2:first-child{margin-top:0}
 
 <!-- ================= STITCH ================= -->
 <section class="panel" id="p-stc" hidden>
-  <div class="hint" style="margin-bottom:14px">A plain listening track — each ayah once, in order, and blocks may cross surahs. No repeats, so it stays small: roughly 1 MB per minute.</div>
+  <div class="hint" style="margin-bottom:14px">A plain listening track — each ayah once, in order, continuously, and blocks may cross surahs. A Bismillah marks each new surah and any non-consecutive jump, so a transition is always audible. No repeats, so it stays small: roughly 1 MB per minute.</div>
 
   <div class="field">
-    <label class="lbl">Add a block</label>
+    <label class="lbl" for="ssfilter">Add a block</label>
+    <input class="ctl" id="ssfilter" type="search" inputmode="search" autocomplete="off"
+           placeholder="Type a name or number — يس · yaseen · 36" style="margin-bottom:10px">
     <select class="ctl" id="ssurah" style="margin-bottom:10px"></select>
-    <div class="row"><select class="ctl" id="sfrom"></select><select class="ctl" id="sto"></select></div>
+    <div class="hint" id="ssfhint" hidden style="margin-bottom:10px"></div>
+    <div class="row">
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">First ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="sfrom">–</button><input id="sfrom" type="number" inputmode="numeric" min="1" max="286" value="1"><button data-step="1" data-t="sfrom">+</button></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">Last ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="sto">–</button><input id="sto" type="number" inputmode="numeric" min="1" max="286" value="10"><button data-step="1" data-t="sto">+</button></div>
+      </div>
+    </div>
   </div>
-  <button class="btn" id="sadd" style="width:100%">Add block</button>
+  <div class="row" style="margin-bottom:14px">
+    <button class="btn" id="spreview">Show text</button>
+    <button class="btn pri" id="sadd">Add block</button>
+  </div>
 
   <h2>Blocks</h2>
   <div id="blocks"></div>
   <div class="readout" id="sreadout"><b id="smain">No blocks yet</b><small id="snote"></small></div>
-
-  <div class="field">
-    <label class="lbl">Gap between ayat</label>
-    <div class="seg" id="sgapmode" role="radiogroup">
-      <button data-v="none"  role="radio">No gap</button>
-      <button data-v="fixed" role="radio">Fixed gap</button>
-    </div>
-    <div id="sgapwrap" style="margin-top:12px">
-      <label class="lbl">Length — <span id="sgaplbl">1.0s</span></label>
-      <input type="range" id="sgap" min="0.5" max="5" step="0.5" value="1">
-    </div>
-    <div class="hint">Separate from the drill gap. No gap gives continuous recitation.</div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="sprevall">Preview all text</button>
   </div>
 
-  <div class="row">
+  <div class="row" style="margin-top:14px">
     <button class="btn pri" id="sbuild">Build &amp; play</button>
     <button class="btn" id="sexp">Build &amp; save MP3</button>
   </div>
@@ -706,7 +711,7 @@ h2:first-child{margin-top:0}
     <p>If a track is long and the browser blocks auto-start, you'll see <b>Ready — tap Play</b>. That's normal; one tap begins it.</p>
 
     <h3>Stitch tab</h3>
-    <p>Builds a plain listening track — each ayah once, in order, no repeats. Add blocks (surah + range); blocks can cross surahs, and Bismillah opens each new surah. Good for revision or just listening.</p>
+    <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and a Bismillah opens each new surah — and marks any non-consecutive jump within the same surah too, so a listener always hears where one passage ends and the next begins. Good for revision or just listening.</p>
 
     <h3>Saving to your phone's player</h3>
     <p>After a track is built, two buttons appear:</p>
@@ -789,8 +794,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v28';
-const BUILD   = '2026-08-24 16:11 UTC';
+const VERSION = 'v29';
+const BUILD   = '2026-09-03 16:37 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -987,19 +992,47 @@ const DB = (()=>{
 const b64ToU8 = b => { const s=atob(b), u=new Uint8Array(s.length);
   for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
 
+const BR_V1L3 = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
+const BR_V2L3 = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0];
+const SR_TBL  = {3:[44100,48000,32000], 2:[22050,24000,16000], 0:[11025,12000,8000]};
+// A LAME "Xing"/"Info" header is a whole frame of encoder metadata (encode
+// delay, padding, a seek TOC) sitting at the start of a file — not real
+// audio. A player skips it because it's frame #0 of a whole file; stitched
+// ayah-by-ayah it lands mid-stream every time, so nothing skips it: it plays
+// as a spurious ~26ms frame AND gets counted by mp3Dur() below, quietly
+// pushing every duration this app computes out of step with the real audio.
+// Alafasy's files all carry one (the app's default reciter); the others
+// don't. Detected by the literal tag a fixed offset past the frame header,
+// same as any MP3 parser — return the frame's length so it can be dropped.
+function xingFrameLen(u8, a, b){
+  const h1=u8[a+1], h2=u8[a+2];
+  if(((h1>>1)&3) !== 1) return 0;                       // must be Layer III
+  const ver=(h1>>3)&3, brI=(h2>>4)&15, srI=(h2>>2)&3, pad=(h2>>1)&1;
+  const srT = SR_TBL[ver];
+  if(!srT || brI===0 || brI===15 || srI===3) return 0;
+  const sr = srT[srI], br = (ver===3?BR_V1L3:BR_V2L3)[brI]*1000;
+  const len = Math.floor((ver===3?144:72)*br/sr) + pad;
+  if(len < 40 || a+len > b) return 0;
+  for(let o=a+4; o<a+40 && o+4<=a+len; o++){
+    const isXing = u8[o]===0x58&&u8[o+1]===0x69&&u8[o+2]===0x6E&&u8[o+3]===0x67;
+    const isInfo = u8[o]===0x49&&u8[o+1]===0x6E&&u8[o+2]===0x66&&u8[o+3]===0x6F;
+    if(isXing || isInfo) return len;
+  }
+  return 0;
+}
 // An ID3 tag landing mid-stream makes decoders choke ("Header missing").
-// Husary's files carry one; the others don't.
+// Husary's files carry one; the others don't. A Xing/Info header frame, if
+// present, is stripped too — see xingFrameLen above.
 function stripTags(u8){
   let a = 0, b = u8.length;
   if(u8[0]===0x49 && u8[1]===0x44 && u8[2]===0x33)
     a = 10 + ((u8[6]&0x7f)<<21 | (u8[7]&0x7f)<<14 | (u8[8]&0x7f)<<7 | (u8[9]&0x7f));
   if(b-a > 128 && u8[b-128]===0x54 && u8[b-127]===0x41 && u8[b-126]===0x47) b -= 128;
   while(a < b-1 && !(u8[a]===0xFF && (u8[a+1]&0xE0)===0xE0)) a++;
+  const xl = xingFrameLen(u8, a, b);
+  if(xl) a += xl;
   return u8.subarray(a,b);
 }
-const BR_V1L3 = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
-const BR_V2L3 = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0];
-const SR_TBL  = {3:[44100,48000,32000], 2:[22050,24000,16000], 0:[11025,12000,8000]};
 
 // Exact duration by counting frames — matches the stitched stream precisely.
 // Reading it off an <audio> element is an estimate and would drift.
@@ -1156,8 +1189,8 @@ function estAyah(text,surah,num){
 const toMB = secs => secs*(bps()*1000/8)/1048576;
 // Drill gap after an ayah of duration d (seconds), by mode. Returns seconds.
 const drillGap = d => S.gapmode==='echo' ? d : (S.gapmode==='none' ? 0 : S.gap);
-// Stitch gap in seconds, by mode.
-const stitchGap = () => S.sgapmode==='none' ? 0 : S.sgap;
+// Stitch tracks always play continuously — no gap between ayat.
+const stitchGap = () => 0;
 
 /* ------------------------------------------------------------ THE STITCH */
 // items: [{s, a, meta}]      gapFn(dur, item, i) -> milliseconds
@@ -1328,12 +1361,14 @@ function renderView(){
   const multi = new Set(VIEW.map(v=>v.s)).size > 1;
   let last = null;
   VIEW.forEach(v=>{
-    if(v.s !== last){
-      if(multi){
+    const newSurah = v.s !== last;
+    if(newSurah || v.brk){
+      if(newSurah && multi){
         const h = document.createElement('div'); h.className='shead';
         h.textContent = `${v.s}. ${sName(v.s)}`; box.appendChild(h);
       }
-      // Bismillah opens each new surah — matching what the audio does.
+      // Bismillah marks each new surah, and any non-consecutive jump within
+      // one (v.brk) — matching what the audio does.
       if(v.s!==9 && !(v.s===1 && v.a===1)){
         const b = document.createElement('div'); b.className='bismline';
         b.textContent = BISM; box.appendChild(b);
@@ -1527,6 +1562,26 @@ async function applyFilter(){
     sync(); try{ await loadSurah(hits[0]); }catch(e){} budget();
   }
 }
+// Same idea as applyFilter above, for Stitch's own surah picker.
+async function applySSFilter(){
+  const q = $('ssfilter').value;
+  const hits = searchSurah(q);
+  const set = new Set(hits);
+  const keep = SURAHS.filter(s=>set.has(s.n));
+  $('ssurah').innerHTML = (keep.length?keep:SURAHS)
+    .map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
+  const h=$('ssfhint');
+  if(!q.trim()){ h.hidden=true; }
+  else { h.hidden=false;
+    h.textContent = hits.length===0 ? 'No match — showing all' :
+                    hits.length===1 ? '1 match' : `${hits.length} matches`; }
+  if(hits.length>=1){
+    $('ssurah').value = hits[0];
+    const s=SURAHS.find(x=>x.n===hits[0]);
+    fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,s.count));
+    try{ await loadSurah(hits[0]); }catch(e){} sreadout();
+  }
+}
 function updateRangeHint(s){
   const h=$('rangehint'); if(h && s) h.textContent = `${s.en} has ${s.count} ayat — type any number.`;
 }
@@ -1611,6 +1666,55 @@ async function preview(){
   }
   btn.disabled=false; btn.textContent='Show text';
 }
+// Stitch tab's own preview — same idea, but for the block currently being
+// configured (surah + from/to), so it can be checked before Add block.
+async function stitchPreview(){
+  const n=+$('ssurah').value, f=+$('sfrom').value, t=+$('sto').value;
+  const btn=$('spreview'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    await loadSurah(n);
+    if(el) el.pause();
+    SEG=[]; PARTS=[]; TOTAL=0; segI=-1;
+    MODE='stitch';
+    VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
+    renderView();
+    $('bar').hidden=true; $('exprow').hidden=true;
+    $('logwrap').hidden=true;
+    $('copyall').hidden=false;
+    $('ptitle').textContent = `${sName(n)} ${f}–${t}`;
+    $('psub').textContent = 'Preview — text only';
+    showPlayer('stc');
+    toast('Preview — check the range, then Add block');
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load the text' : 'Offline — this surah is not saved yet');
+  }
+  btn.disabled=false; btn.textContent='Show text';
+}
+// Preview every block added so far, in order — with the same Bismillah
+// breaks the built audio will have — before spending time/data on a build.
+async function stitchPreviewAll(){
+  if(!BLOCKS.length) return toast('No blocks yet — add one first');
+  const btn=$('sprevall'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    for(const b of BLOCKS) await loadSurah(b.surah);
+    if(el) el.pause();
+    SEG=[]; PARTS=[]; TOTAL=0; segI=-1;
+    MODE='stitch';
+    VIEW = stitchView();
+    renderView();
+    $('bar').hidden=true; $('exprow').hidden=true;
+    $('logwrap').hidden=true;
+    $('copyall').hidden=false;
+    const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
+    $('ptitle').textContent = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
+    $('psub').textContent = 'Preview — text only';
+    showPlayer('stc');
+    toast('Preview — check the blocks, then Build');
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load the text' : "Offline — some of this isn't downloaded yet");
+  }
+  btn.disabled=false; btn.textContent='Preview all text';
+}
 async function begin(){
   const n=+$('surah').value, f=+$('from').value, t=+$('to').value;
   $('go').disabled=true; $('go').textContent='Preparing…';
@@ -1676,21 +1780,31 @@ async function startOrArm(){
 
 /* -------------------------------------------------------------- stitch tab */
 const blockAyat = b => b.to - b.from + 1;
+// A block continues straight on from the previous one only if it's the same
+// surah picking up exactly where the last one left off. Anything else — a new
+// surah, or a jump within the same surah — is a transition a listener needs a
+// cue for.
+const blockContiguous = (b, lastS, lastA) => b.surah===lastS && b.from===lastA+1;
 function stitchItems(){
-  const items = []; let last = null;
+  const items = []; let lastS = null, lastA = null;
   BLOCKS.forEach(b=>{
-    // Bismillah opens every new surah. Never for 9 (it has none); never before
+    // Bismillah marks every transition — a new surah, or a non-consecutive
+    // jump within the same surah. Never for 9 (it has none); never before
     // 1:1, which IS the Bismillah already.
-    if(b.surah !== last && b.surah !== 9 && !(b.surah===1 && b.from===1))
+    if(!blockContiguous(b, lastS, lastA) && b.surah !== 9 && !(b.surah===1 && b.from===1))
       items.push({s:1, a:1, meta:{k:'listen', bism:true}});
     for(let i=b.from;i<=b.to;i++) items.push({s:b.surah, a:i, meta:{k:'listen'}});
-    last = b.surah;
+    lastS = b.surah; lastA = b.to;
   });
   return items;
 }
 function stitchView(){
-  const v = [];
-  BLOCKS.forEach(b=>{ for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i}); });
+  const v = []; let lastS = null, lastA = null;
+  BLOCKS.forEach(b=>{
+    const brk = !blockContiguous(b, lastS, lastA);
+    for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i, brk: brk && i===b.from});
+    lastS = b.surah; lastA = b.to;
+  });
   return v;
 }
 function renderBlocks(){
@@ -1699,19 +1813,22 @@ function renderBlocks(){
     box.innerHTML = `<div class="empty">No blocks yet. Choose a surah and range above, then Add block.</div>`;
   } else {
     box.innerHTML='';
+    let lastS=null, lastA=null;
     BLOCKS.forEach((b,i)=>{
+      const brk = !blockContiguous(b, lastS, lastA);
       const d = document.createElement('div'); d.className='card';
-      d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat</small></div><button class="x">×</button>`;
+      d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat${brk?' · <span style="color:var(--gold)">opens with Bismillah</span>':''}</small></div><button class="x">×</button>`;
       d.querySelector('b').textContent = `${i+1}. ${sName(b.surah)} ${b.from}–${b.to}`;
       d.querySelector('.x').onclick = ()=>{ BLOCKS.splice(i,1); saveB(); renderBlocks(); };
       box.appendChild(d);
+      lastS=b.surah; lastA=b.to;
     });
   }
   sreadout();
 }
 function sreadout(){
   const m=$('smain'), note=$('snote'), r=$('sreadout');
-  const on = v => { $('sbuild').disabled=!v; $('sexp').disabled=!v; };
+  const on = v => { $('sbuild').disabled=!v; $('sexp').disabled=!v; $('sprevall').disabled=!v; };
   if(!BLOCKS.length){ m.textContent='No blocks yet'; note.textContent=''; r.className='readout'; on(false); return; }
   const ayat = BLOCKS.reduce((a,b)=>a+blockAyat(b),0);
   let secs=0, known=true;
@@ -1980,10 +2097,7 @@ function toggle(node, key, after){
 function paintGapModes(){
   document.querySelectorAll('#gapmode button').forEach(b=>
     b.setAttribute('aria-checked', String(b.dataset.v===S.gapmode)));
-  document.querySelectorAll('#sgapmode button').forEach(b=>
-    b.setAttribute('aria-checked', String(b.dataset.v===S.sgapmode)));
   $('gapwrap').style.display  = S.gapmode==='fixed'  ? '' : 'none';
-  $('sgapwrap').style.display = S.sgapmode==='fixed' ? '' : 'none';
   $('gaphint').textContent =
     S.gapmode==='none'  ? 'Ayat follow on with no pause.' :
     S.gapmode==='echo'  ? 'After each ayah, a silence as long as it — recite it back before the next.' :
@@ -1995,7 +2109,6 @@ function applySettings(){
   $('asz').value = S.asz;  $('aszlbl').textContent=S.asz+'px';
   $('uisz').value = S.uisz; $('uiszlbl').textContent=S.uisz+'px';
   document.documentElement.style.setProperty('--uisz', S.uisz+'px');
-  $('sgap').value = S.sgap; $('sgaplbl').textContent=(+S.sgap).toFixed(1)+'s';
   $('rep').value = S.rep; $('rng').value = S.rng; $('sd').value = S.sd;
   document.documentElement.style.setProperty('--asz', S.asz+'px');
   ['hl','veil','bism','wake','lyrics'].forEach(k=>{
@@ -2634,7 +2747,14 @@ function boot(){
   },160); };
   document.querySelectorAll('[data-step]').forEach(b=> b.onclick = ()=>{
     const i=$(b.dataset.t);
-    i.value = Math.max(+i.min, Math.min(+i.max, +i.value + (+b.dataset.step))); sync(); });
+    i.value = Math.max(+i.min, Math.min(+i.max, +i.value + (+b.dataset.step)));
+    if(b.dataset.t==='sfrom' || b.dataset.t==='sto'){
+      if(+$('sto').value < +$('sfrom').value){
+        if(b.dataset.t==='sfrom') $('sto').value=$('sfrom').value; else $('sfrom').value=$('sto').value;
+      }
+      sreadout();
+    } else sync();
+  });
   $('rep').oninput=sync; $('rng').oninput=sync; $('sd').oninput=sync;
   $('from').onchange=sync; $('to').onchange=sync;
   $('surah').onchange = async ()=>{
@@ -2657,7 +2777,7 @@ function boot(){
   $('stop').onclick=stop; $('prev').onclick=()=>jump(-1); $('next').onclick=()=>jump(1);
   $('newsess').onclick = newSession;
   // Tapping a number box selects its whole value so typing replaces it cleanly.
-  ['from','to'].forEach(id=>{
+  ['from','to','sfrom','sto'].forEach(id=>{
     const el2=$(id);
     const sel=()=>{ try{ el2.select(); }catch(e){} };
     el2.addEventListener('focus', ()=>setTimeout(sel,0));
@@ -2675,6 +2795,10 @@ function boot(){
   };
 
   // stitch
+  let ssftimer;
+  $('ssfilter').oninput = ()=>{ clearTimeout(ssftimer); ssftimer=setTimeout(applySSFilter,140); };
+  $('ssfilter').onsearch = applySSFilter;   // fires on the clear (×) button too
+  $('ssfilter').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('ssfilter').blur(); } });
   $('ssurah').onchange = async ()=>{
     const s=SURAHS.find(x=>x.n===+$('ssurah').value);
     fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,s.count));
@@ -2682,14 +2806,14 @@ function boot(){
   };
   $('sfrom').onchange = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sto').value=$('sfrom').value; };
   $('sto').onchange   = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sfrom').value=$('sto').value; };
+  $('spreview').onclick = stitchPreview;
   $('sadd').onclick   = addBlock;
+  $('sprevall').onclick = stitchPreviewAll;
   $('sbuild').onclick = ()=>buildStitch(true);
   $('sexp').onclick   = ()=>buildStitch(false);
   $('srecipe').onclick= saveRecipe;
   $('sclearb').onclick= ()=>{ if(!BLOCKS.length) return;
     if(!confirm('Remove all blocks?')) return; BLOCKS=[]; saveB(); renderBlocks(); };
-  $('sgap').oninput = ()=>{ S.sgap=+$('sgap').value; $('sgaplbl').textContent=S.sgap.toFixed(1)+'s';
-    saveS(); sreadout(); };
 
   // settings
   $('qari').innerHTML = RECITERS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
@@ -2704,8 +2828,6 @@ function boot(){
     document.documentElement.style.setProperty('--uisz',S.uisz+'px'); saveS(); };
   document.querySelectorAll('#gapmode button').forEach(b=> b.onclick = ()=>{
     S.gapmode=b.dataset.v; saveS(); paintGapModes(); budget(); });
-  document.querySelectorAll('#sgapmode button').forEach(b=> b.onclick = ()=>{
-    S.sgapmode=b.dataset.v; saveS(); paintGapModes(); sreadout(); });
   toggle($('t-hl'),'hl',    ()=> paint(SEG[segI]||null));
   toggle($('t-veil'),'veil',()=> paint(SEG[segI]||null));
   toggle($('t-bism'),'bism',budget);
