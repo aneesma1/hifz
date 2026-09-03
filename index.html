@@ -654,7 +654,7 @@ h2:first-child{margin-top:0}
 
   <h2>Playback</h2>
   <div class="sw"><div><b>Keep screen awake</b><p>Only a fallback. Stitched audio should survive a locked screen on its own.</p></div><button class="tog" id="t-wake" role="switch"></button></div>
-  <div class="sw"><div><b>Verses in exported MP3</b><p>Embeds timed verses and saves a matching .lrc, so a player like Musicolet shows each ayah as it's recited. Adds a small zip.</p></div><button class="tog" id="t-lyrics" role="switch"></button></div>
+  <div class="sw"><div><b>Verses in exported MP3</b><p>Embeds timed verses and saves matching .lrc and .srt files, so a player like Musicolet (phone) or VLC (PC) shows each ayah as it's recited. Adds a small zip.</p></div><button class="tog" id="t-lyrics" role="switch"></button></div>
 
   <h2>Storage</h2>
   <div class="hint" id="cinfo">—</div>
@@ -713,15 +713,17 @@ h2:first-child{margin-top:0}
     <h3>Stitch tab</h3>
     <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and a Bismillah opens each new surah — and marks any non-consecutive jump within the same surah too, so a listener always hears where one passage ends and the next begins. Good for revision or just listening.</p>
 
-    <h3>Saving to your phone's player</h3>
+    <h3>Saving to your phone or PC's player</h3>
     <p>After a track is built, two buttons appear:</p>
     <ul>
       <li><b>For listening</b> — a plain MP3.</li>
-      <li><b>For Musicolet</b> — an MP3 with the <b>verses embedded inside it</b>, plus a matching <code>.lrc</code> file, delivered as one zip.</li>
+      <li><b>For Musicolet</b> — an MP3 with the <b>verses embedded inside it</b>, plus matching <code>.lrc</code> and <code>.srt</code> files, delivered as one zip.</li>
     </ul>
     <h4>Setting up Musicolet</h4>
     <div class="step">1. Export "For Musicolet" → a zip lands in Downloads.<br>2. Extract the zip into a folder.<br>3. Open that folder in Musicolet and play.<br>4. Verses appear on screen and lock screen as each ayah is recited.</div>
     <p>The verses ride inside the MP3, so even without the <code>.lrc</code> a player that reads embedded lyrics will show them. The <code>.lrc</code> is there as a reliable fallback.</p>
+    <h4>Watching verses on a PC</h4>
+    <p>Windows Media Player and Media Player Classic won't show any of this — they don't read embedded lyrics or <code>.lrc</code>/<code>.srt</code> files. <b>VLC</b> can, using the <code>.srt</code>: extract the zip so the <code>.srt</code> sits next to its matching <code>.mp3</code> in the same folder (same file name — VLC pairs them automatically), then turn on <b>Audio ▸ Visualizations</b> before playing. VLC only draws subtitles onto a visual surface, so without a visualization running there's nowhere for the verse to appear even with the file in place.</p>
 
     <h3>Copying verses</h3>
     <p>On the reading screen, each ayah has a small <b>copy</b> button, and <b>Copy all verses</b> copies the whole passage (with verse numbers) as Arabic text.</p>
@@ -794,8 +796,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v29';
-const BUILD   = '2026-09-03 16:37 UTC';
+const VERSION = 'v30';
+const BUILD   = '2026-09-03 17:01 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1091,6 +1093,31 @@ function buildLRC(part, title){
     const t = Math.max(0, s.l0);
     const m = Math.floor(t/60), sec = (t%60).toFixed(2).padStart(5,'0');
     out.push(`[${String(m).padStart(2,'0')}:${sec}]${segLyric(s)}`);
+  }
+  return out.join('\n');
+}
+// HH:MM:SS,mmm — SRT's timestamp format. Built from integer milliseconds
+// throughout so a rounded 1000ms never lands as an invalid ",1000" instead of
+// carrying into the next second.
+function srtTime(t){
+  let ms = Math.max(0, Math.round(t*1000));
+  const h = Math.floor(ms/3600000); ms -= h*3600000;
+  const m = Math.floor(ms/60000);   ms -= m*60000;
+  const s = Math.floor(ms/1000);    ms -= s*1000;
+  const pad=(n,w=2)=>String(n).padStart(w,'0');
+  return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms,3)}`;
+}
+// SRT for one part — same segments and same text (segLyric) as the .lrc
+// above, just as numbered start/end cues instead of single timestamps. Pairs
+// with the MP3 the same way: identical base name, same folder. VLC needs a
+// Visualization turned on (Audio ▸ Visualizations) before it'll render
+// subtitles over audio-only playback — the file alone isn't enough there.
+function buildSRT(part){
+  const out = []; let n = 1;
+  for(const s of SEG){
+    if(s.p !== part) continue;
+    const start = Math.max(0, s.l0), end = start + (s.g1 - s.g0);
+    out.push(`${n++}\n${srtTime(start)} --> ${srtTime(end)}\n${segLyric(s)}\n`);
   }
   return out.join('\n');
 }
@@ -1464,13 +1491,16 @@ async function exportAudio(withLyrics){
     for(let i=0;i<PARTS.length;i++){
       const title = ascii(PARTS.length>1 ? `${base} part ${i+1} of ${PARTS.length}` : base);
       const lrc = withLrc ? buildLRC(i, title) : null;
+      const srt = withLrc ? buildSRT(i) : null;
       const tag = id3(title, artist, 'Hifz', lrc);   // lyrics ride inside the MP3
       const body = new Uint8Array(await PARTS[i].blob.arrayBuffer());
       const u8 = new Uint8Array(tag.length + body.length);
       u8.set(tag,0); u8.set(body,tag.length);
       files.push({name:`${title}.mp3`, u8});
-      // matching .lrc beside it — same base name, which is how folder players pair them
+      // matching .lrc and .srt beside it — same base name, which is how
+      // folder players (and VLC, for the .srt) pair them up
       if(lrc) files.push({name:`${title}.lrc`, u8:new TextEncoder().encode(lrc)});
+      if(srt) files.push({name:`${title}.srt`, u8:new TextEncoder().encode(srt)});
       await new Promise(r=>setTimeout(r,0));   // let the UI breathe
     }
     // A lone MP3 (no lyrics) downloads directly and plays on a tap. Anything
