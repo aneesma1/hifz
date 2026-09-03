@@ -425,7 +425,10 @@ h2:first-child{margin-top:0}
     <div class="readtools">
       <input class="ctl" id="rdfilter" type="search" inputmode="search" autocomplete="off" placeholder="Go to surah — name or number">
     </div>
-    <select class="ctl" id="rdsurah" style="margin-bottom:14px"></select>
+    <select class="ctl" id="rdsurah" style="margin-bottom:10px"></select>
+    <div class="row" style="margin-bottom:14px">
+      <button class="btn dgr" id="rdclear">Clear</button>
+    </div>
     <div id="rdtext"><div class="empty">Pick a surah to read, or search above.</div></div>
   </div>
 
@@ -483,6 +486,9 @@ h2:first-child{margin-top:0}
   <div class="row" style="margin-top:22px">
     <button class="btn pri" id="go">Start</button>
     <button class="btn" id="save">Save range</button>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn dgr" id="clr">Clear</button>
   </div>
 </section>
 
@@ -699,6 +705,7 @@ h2:first-child{margin-top:0}
       <li>Type in the surah box to filter — English name, Arabic (with or without harakat), the meaning, or the number. E.g. <code>yaseen</code>, <code>يس</code>, <code>36</code>, or <code>cave</code>.</li>
       <li>Set the ayah range with the two boxes.</li>
       <li><b>Show text</b> loads the verses without downloading audio — check the range is right first.</li>
+      <li><b>Clear</b> resets the surah, range and every repetition setting back to their defaults. Doesn't touch anything you've saved.</li>
     </ul>
     <h4>Repetition</h4>
     <ul>
@@ -796,8 +803,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v30';
-const BUILD   = '2026-09-03 17:01 UTC';
+const VERSION = 'v32';
+const BUILD   = '2026-09-03 17:27 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1977,6 +1984,18 @@ function saveRange(){
               rep:+$('rep').value, rng:+$('rng').value, sd:+$('sd').value, ts:Date.now()});
   saveL(); toast(`Saved “${name}”`);
 }
+// Reset the whole Memorize setup back to defaults — surah, range and every
+// repetition setting. Doesn't touch saved ranges (Saved tab) or anything
+// downloaded/cached; those are separate from what's just being configured.
+async function clearRange(){
+  $('sfilter').value = ''; $('sfhint').hidden = true;
+  fillSurahSelect($('surah'));
+  $('surah').value = DEF.surah;
+  fillAyat($('surah'),$('from'),$('to'),DEF.from,DEF.to);
+  $('rep').value = DEF.rep; $('rng').value = DEF.rng; $('sd').value = DEF.sd;
+  sync(); try{ await loadSurah(DEF.surah); }catch(e){} budget();
+  toast('Cleared — back to defaults');
+}
 function saveRecipe(){
   if(!BLOCKS.length) return toast('Add some blocks first');
   const name=(prompt('Name this recipe:', 'Morning revision')||'').trim();
@@ -2221,6 +2240,23 @@ function toggleBookmark(s,a,text){
 function updateLastRead(s,a){
   if(!readTabScrolled) return;   // ignore initial render — only track real scrolling
   LASTREAD={s,a}; saveLR(); updateContinueChip();
+}
+// Blank the browse view back to nothing-picked — filter text, surah
+// selection, and the rendered verses. LASTREAD (and the "Continue reading"
+// chip) is separate memory of where you left off, not what's on screen right
+// now, so it's untouched — nothing here can move it, since readTabScrolled
+// is false and there's no ayah on screen for a scroll to report anyway.
+function clearReadView(){
+  $('rdfilter').value = '';
+  const sel = $('rdsurah');
+  let ph = sel.querySelector('option[value=""]');
+  if(!ph){
+    ph = document.createElement('option'); ph.value=''; ph.textContent='— choose a surah —';
+    sel.insertBefore(ph, sel.firstChild);
+  }
+  sel.value = '';
+  rdSurah = null; readTabScrolled = false;
+  $('rdtext').innerHTML = '<div class="empty">Pick a surah to read, or search above.</div>';
 }
 function updateContinueChip(){
   if(!LASTREAD||!SURAHS.length){ $('continuechip').hidden=true; return; }
@@ -2768,8 +2804,13 @@ function boot(){
     if(!/[a-z]/i.test(v)) return toast('Type Latin letters to convert (e.g. rahman)');
     $('q').value = translitToArabic(v); toast('Converted — check it, then Search'); };
   $('q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); runSearch(); } });
-  $('rdsurah').onchange = async ()=>{ const n=+$('rdsurah').value;
-    try{ await loadSurah(n); }catch(e){} renderReadSurah(n); };
+  $('rdsurah').onchange = async ()=>{
+    if(!$('rdsurah').value){ clearReadView(); return; }   // the placeholder itself
+    const ph = $('rdsurah').querySelector('option[value=""]'); if(ph) ph.remove();
+    const n=+$('rdsurah').value;
+    try{ await loadSurah(n); }catch(e){} renderReadSurah(n);
+  };
+  $('rdclear').onclick = clearReadView;
   let rdtimer;
   $('rdfilter').oninput = ()=>{ clearTimeout(rdtimer); rdtimer=setTimeout(()=>{
     const hits = searchSurah($('rdfilter').value);
@@ -2797,7 +2838,7 @@ function boot(){
   $('sfilter').onsearch = applyFilter;   // fires on the clear (×) button too
   $('sfilter').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('sfilter').blur(); } });
   $('preview').onclick = preview;
-  $('go').onclick=begin; $('save').onclick=saveRange;
+  $('go').onclick=begin; $('save').onclick=saveRange; $('clr').onclick=clearRange;
 
   $('play').onclick = ()=>{
     if(preparing) return;
