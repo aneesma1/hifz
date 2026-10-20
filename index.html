@@ -522,7 +522,7 @@ h2:first-child{margin-top:0}
 
 <!-- ================= STITCH ================= -->
 <section class="panel" id="p-stc" hidden>
-  <div class="hint" style="margin-bottom:14px">A plain listening track — each ayah once, in order, continuously, and blocks may cross surahs. A Bismillah marks each new surah and any non-consecutive jump, so a transition is always audible. No repeats, so it stays small: roughly 1 MB per minute.</div>
+  <div class="hint" style="margin-bottom:14px">A plain listening track — each ayah once, in order, continuously, and blocks may cross surahs. Every block opens with a Bismillah — a marker, not a recitation — so you always hear where one block ends and the next begins, even back-to-back ones. No repeats, so it stays small: roughly 1 MB per minute.</div>
 
   <div class="field">
     <label class="lbl" for="ssfilter">Add a block</label>
@@ -540,6 +540,7 @@ h2:first-child{margin-top:0}
         <div class="stepper"><button data-step="-1" data-t="sto">–</button><input id="sto" type="number" inputmode="numeric" min="1" max="286" value="10"><button data-step="1" data-t="sto">+</button></div>
       </div>
     </div>
+    <div class="hint" id="ssrangehint"></div>
   </div>
   <div class="row" style="margin-bottom:14px">
     <button class="btn" id="spreview">Show text</button>
@@ -718,7 +719,7 @@ h2:first-child{margin-top:0}
     <p>If a track is long and the browser blocks auto-start, you'll see <b>Ready — tap Play</b>. That's normal; one tap begins it.</p>
 
     <h3>Stitch tab</h3>
-    <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and a Bismillah opens each new surah — and marks any non-consecutive jump within the same surah too, so a listener always hears where one passage ends and the next begins. Good for revision or just listening.</p>
+    <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and every block opens with a Bismillah — even two back-to-back blocks in the same surah, and even a block from Surah 9 (which has no Bismillah of its own; here it's just a marker, not a recitation) — so a listener always hears where one block ends and the next begins, whether played straight through or saved separately. The one exception is a block starting at Al-Fātiḥah 1:1, since that ayah already is the Bismillah. Good for revision or just listening.</p>
 
     <h3>Saving to your phone or PC's player</h3>
     <p>After a track is built, two buttons appear:</p>
@@ -803,8 +804,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v32';
-const BUILD   = '2026-09-03 17:27 UTC';
+const VERSION = 'v33';
+const BUILD   = '2026-10-20 15:15 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1401,9 +1402,11 @@ function renderView(){
         const h = document.createElement('div'); h.className='shead';
         h.textContent = `${v.s}. ${sName(v.s)}`; box.appendChild(h);
       }
-      // Bismillah marks each new surah, and any non-consecutive jump within
-      // one (v.brk) — matching what the audio does.
-      if(v.s!==9 && !(v.s===1 && v.a===1)){
+      // Stitch sets v.brk as a deliberate block-boundary marker, shown
+      // regardless of surah (including 9). Outside Stitch (drill — v.brk
+      // unset), Bismillah plays only entering a genuine new surah, skipping
+      // 9 (no canonical Bismillah) and Al-Fātiḥah 1:1 (already IS one).
+      if(v.brk || (newSurah && v.s!==9 && !(v.s===1 && v.a===1))){
         const b = document.createElement('div'); b.className='bismline';
         b.textContent = BISM; box.appendChild(b);
       }
@@ -1619,8 +1622,8 @@ async function applySSFilter(){
     try{ await loadSurah(hits[0]); }catch(e){} sreadout();
   }
 }
-function updateRangeHint(s){
-  const h=$('rangehint'); if(h && s) h.textContent = `${s.en} has ${s.count} ayat — type any number.`;
+function updateRangeHint(s, hintId){
+  const h=$(hintId); if(h && s) h.textContent = `${s.en} has ${s.count} ayat — type any number.`;
 }
 function fillAyat(surahSel, fromSel, toSel, f, t){
   const s = SURAHS.find(x=>x.n===+surahSel.value); if(!s) return;
@@ -1632,7 +1635,8 @@ function fillAyat(surahSel, fromSel, toSel, f, t){
     el.value = val;
   };
   setOne(fromSel, f); setOne(toSel, t);
-  if(fromSel.id==='from') updateRangeHint(s);
+  if(fromSel.id==='from') updateRangeHint(s,'rangehint');
+  else if(fromSel.id==='sfrom') updateRangeHint(s,'ssrangehint');
 }
 function sync(){
   const s = SURAHS.find(x=>x.n===+$('surah').value);
@@ -1817,30 +1821,27 @@ async function startOrArm(){
 
 /* -------------------------------------------------------------- stitch tab */
 const blockAyat = b => b.to - b.from + 1;
-// A block continues straight on from the previous one only if it's the same
-// surah picking up exactly where the last one left off. Anything else — a new
-// surah, or a jump within the same surah — is a transition a listener needs a
-// cue for.
-const blockContiguous = (b, lastS, lastA) => b.surah===lastS && b.from===lastA+1;
+// Bismillah here is a block-boundary marker, not a recitation — it tells the
+// listener "a block starts here," including into Surah 9 (which has no
+// canonical Bismillah) and even when the next block picks up exactly where
+// the last one left off. The one true exception is a block starting at
+// Al-Fātiḥah 1:1 — that ayah already IS the Bismillah, so adding another
+// would just repeat it.
+const blockOpensWithBismillah = b => !(b.surah===1 && b.from===1);
 function stitchItems(){
-  const items = []; let lastS = null, lastA = null;
+  const items = [];
   BLOCKS.forEach(b=>{
-    // Bismillah marks every transition — a new surah, or a non-consecutive
-    // jump within the same surah. Never for 9 (it has none); never before
-    // 1:1, which IS the Bismillah already.
-    if(!blockContiguous(b, lastS, lastA) && b.surah !== 9 && !(b.surah===1 && b.from===1))
+    if(blockOpensWithBismillah(b))
       items.push({s:1, a:1, meta:{k:'listen', bism:true}});
     for(let i=b.from;i<=b.to;i++) items.push({s:b.surah, a:i, meta:{k:'listen'}});
-    lastS = b.surah; lastA = b.to;
   });
   return items;
 }
 function stitchView(){
-  const v = []; let lastS = null, lastA = null;
+  const v = [];
   BLOCKS.forEach(b=>{
-    const brk = !blockContiguous(b, lastS, lastA);
+    const brk = blockOpensWithBismillah(b);
     for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i, brk: brk && i===b.from});
-    lastS = b.surah; lastA = b.to;
   });
   return v;
 }
@@ -1850,15 +1851,13 @@ function renderBlocks(){
     box.innerHTML = `<div class="empty">No blocks yet. Choose a surah and range above, then Add block.</div>`;
   } else {
     box.innerHTML='';
-    let lastS=null, lastA=null;
     BLOCKS.forEach((b,i)=>{
-      const brk = !blockContiguous(b, lastS, lastA);
+      const brk = blockOpensWithBismillah(b);
       const d = document.createElement('div'); d.className='card';
       d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat${brk?' · <span style="color:var(--gold)">opens with Bismillah</span>':''}</small></div><button class="x">×</button>`;
       d.querySelector('b').textContent = `${i+1}. ${sName(b.surah)} ${b.from}–${b.to}`;
       d.querySelector('.x').onclick = ()=>{ BLOCKS.splice(i,1); saveB(); renderBlocks(); };
       box.appendChild(d);
-      lastS=b.surah; lastA=b.to;
     });
   }
   sreadout();
