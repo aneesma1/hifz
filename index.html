@@ -804,8 +804,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v33';
-const BUILD   = '2026-10-20 15:15 UTC';
+const VERSION = 'v34';
+const BUILD   = '2026-10-23 07:04 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -837,6 +837,7 @@ const bps = () => (RECITERS.find(r=>r.id===S.qari)||{bps:128}).bps;
 const mmss = s => { s=Math.max(0,Math.round(s)); const m=Math.floor(s/60), sec=String(s%60).padStart(2,'0');
   return m>=60 ? `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}:${sec}` : `${m}:${sec}`; };
 const sName = n => { const s = SURAHS.find(x=>x.n===n); return s ? s.en : 'Surah '+n; };
+const sNum  = n => String(n).padStart(3,'0');
 const ascii = s => s.replace(/[^\x20-\x7E]/g,'').replace(/[\/\\:*?"<>|]/g,'-').replace(/\s+/g,' ').trim();
 
 const DEF = {qari:'Alafasy_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
@@ -1761,7 +1762,7 @@ async function begin(){
   $('go').disabled=true; $('go').textContent='Preparing…';
   MODE='drill'; showPlayer('sel'); prepStart(); clearLog();
   $('copyall').hidden=false;
-  $('ptitle').textContent = `${sName(n)} ${f}–${t}`;
+  $('ptitle').textContent = `${sNum(n)} ${sName(n)} ${f}–${t}`;
   $('psub').textContent = 'Drill';
   const plays = countQueue(f,t,+$('rep').value,+$('rng').value,depthVal());
   logLine(`Starting drill — ${sName(n)} ${f}–${t}`, 'in');
@@ -1771,7 +1772,7 @@ async function begin(){
     logLine('Text ready', 'ok');
     VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
     renderView();
-    LABEL = `${sName(n)} ${f}-${t} drill ${S.rep}x${S.rng}`;
+    LABEL = `${sNum(n)} ${sName(n)} ${f}-${t} drill ${S.rep}x${S.rng}`;
     ensureEl();   // create the audio element now; do NOT await a source-less
                   // play() here — on some Android browsers that promise never
                   // settles until the next screen tap, which freezes the whole
@@ -1900,6 +1901,10 @@ async function buildStitch(andPlay){
   MODE='stitch';
   const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
   LABEL = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
+  // Numbered only when every block is the same surah — a single leading
+  // number would be misleading once blocks span more than one.
+  const oneSurah = BLOCKS.every(b=>b.surah===BLOCKS[0].surah);
+  if(oneSurah) LABEL = `${sNum(BLOCKS[0].surah)} ${LABEL}`;
   $('sbuild').disabled=true; $('sexp').disabled=true;
   showPlayer('stc'); prepStart(); clearLog();
   $('copyall').hidden=false;
