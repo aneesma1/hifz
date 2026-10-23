@@ -1,0 +1,3016 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hifz">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Hifz — Stacked Memorizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Light Material palette. Names kept from the old theme so existing rules
+     re-colour automatically; only the values changed. */
+  --ink:#F4F2EA;        /* app background (warm off-white) */
+  --ink-2:#FFFFFF;      /* card / input surface */
+  --ink-3:#ECEAE0;      /* raised / filled control */
+  --line:#E2DFD4;       /* hairlines / borders */
+  --parchment:#1C2A2A;  /* primary text (dark) */
+  --muted:#63706F;      /* secondary text */
+  --jade:#1E8A6A; --jade-soft:rgba(30,138,106,.12);
+  --gold:#9A7B12; --gold-soft:rgba(154,123,18,.14);
+  --red:#C0392B; --red-soft:rgba(192,57,43,.10);
+  --amber:#B9761C;
+  --shadow:0 1px 3px rgba(20,40,40,.10),0 1px 2px rgba(20,40,40,.06);
+  --shadow-lift:0 4px 14px rgba(20,40,40,.12);
+  --pad:16px; --navh:64px;
+  --arabic:'Amiri Quran','Traditional Arabic','Scheherazade New',serif;
+  --ui:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+html{background:#E6E3D9}
+body{background:var(--ink);color:var(--parchment);font-family:var(--ui);font-size:var(--uisz,19px);line-height:1.5;
+  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);overscroll-behavior-y:none;
+  max-width:560px;margin:0 auto;box-shadow:0 0 40px rgba(20,40,40,.08)}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select{font-family:inherit;font-size:inherit}
+
+/* ---- top app bar (branding kept) ---- */
+header{display:flex;align-items:center;gap:10px;padding:14px var(--pad);flex:none;background:var(--ink-2);
+  border-bottom:1px solid var(--line)}
+.brand{font-weight:700;letter-spacing:.02em;font-size:1em;color:var(--parchment)}
+.brand b{color:var(--jade)}
+.brand small{display:block;font-size:.6em;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:1px}
+#netdot{width:8px;height:8px;border-radius:50%;background:var(--jade);margin-left:auto;flex:none}
+#netdot.off{background:var(--red)}
+
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--pad);
+  padding-bottom:calc(var(--navh) + 155px)}
+.panel[hidden]{display:none}
+.field{margin-bottom:18px}
+.lbl{display:block;font-size:.78em;letter-spacing:.02em;color:var(--muted);margin-bottom:8px;font-weight:600}
+.ctl{width:100%;padding:14px;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;
+  color:var(--parchment);appearance:none;box-shadow:var(--shadow)}
+.ctl:focus{outline:none;border-color:var(--jade);box-shadow:0 0 0 3px var(--jade-soft)}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
+
+/* ---- buttons: filled Material feel ---- */
+.btn{padding:15px;border-radius:12px;background:var(--ink-2);border:1px solid var(--line);
+  text-align:center;font-weight:600;box-shadow:var(--shadow);transition:transform .06s}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--jade);border-color:var(--jade);color:#fff;box-shadow:var(--shadow-lift)}
+.btn.dgr{color:var(--red);border-color:var(--red-soft);background:var(--red-soft);box-shadow:none}
+.btn[disabled]{opacity:.5}
+input[type=range]{width:100%;accent-color:var(--jade);height:36px}
+
+.stepper{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--ink-2);overflow:hidden;box-shadow:var(--shadow);width:100%}
+.stepper button{width:52px;min-width:52px;height:52px;min-height:52px;font-size:1.4em;color:var(--jade);flex:none;font-weight:600;flex-shrink:0}
+.stepper button:active{background:var(--jade-soft)}
+.stepper input{flex:1;min-width:3em;width:100%;text-align:center;background:none;border:none;color:var(--parchment);font-weight:700;font-size:1.35em;padding:0}
+.stepper input:focus{outline:none;color:var(--jade)}
+.hint{font-size:.85em;color:var(--muted);margin-top:7px;line-height:1.5}
+.sublbl{font-size:.72em;color:var(--muted);margin-bottom:5px;font-weight:600}
+
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.sw:last-child{border-bottom:none}.sw p{margin:2px 0 0;font-size:.85em;color:var(--muted)}
+.sw b{font-weight:600}
+.tog{width:50px;height:30px;border-radius:15px;background:var(--ink-3);border:1px solid var(--line);position:relative;flex:none;transition:background .15s}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:var(--shadow);transition:transform .15s}
+.tog[aria-checked="true"]{background:var(--jade);border-color:var(--jade)}
+.tog[aria-checked="true"]::after{transform:translateX(20px);background:#fff}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--ink-2);box-shadow:var(--shadow)}
+.seg button{flex:1;padding:13px 6px;font-size:.85em;font-weight:600;color:var(--muted);
+  border-right:1px solid var(--line);line-height:1.25}
+.seg button:last-child{border-right:none}
+.seg button[aria-checked="true"]{background:var(--jade);color:#fff}
+
+h2{font-size:.8em;letter-spacing:.02em;text-transform:uppercase;color:var(--jade);margin:28px 0 12px;font-weight:700}
+h2:first-child{margin-top:0}
+
+.readout{border:1px solid var(--line);border-radius:14px;padding:15px;background:var(--ink-2);margin-bottom:16px;box-shadow:var(--shadow)}
+.readout b{font-weight:700;font-size:1em;display:block}
+.readout small{font-size:.85em;color:var(--muted);margin-top:6px;line-height:1.5;display:block}
+.readout.ok{border-color:var(--jade);background:var(--jade-soft)} .readout.ok b{color:var(--jade)}
+.readout.warn{border-color:var(--amber)} .readout.warn b{color:var(--amber)}
+.readout.bad{border-color:var(--red);background:var(--red-soft)} .readout.bad b{color:var(--red)}
+
+/* ---- reading pane ---- */
+.shead{font-size:.78em;letter-spacing:.06em;text-transform:uppercase;color:var(--jade);
+  padding:18px 4px 8px;font-weight:700}
+.bismline{font-family:var(--arabic);font-size:calc(var(--asz,34px) * .74);text-align:center;color:var(--gold);
+  padding:12px 0;direction:rtl;line-height:2.2}
+.ayah{direction:rtl;text-align:right;font-family:var(--arabic);padding:16px 14px;border-radius:14px;margin:8px 0;
+  line-height:2.4;transition:background .2s,opacity .2s,filter .25s;background:var(--ink-2);
+  box-shadow:var(--shadow);border:1px solid var(--line);position:relative}
+.ayah .t{font-size:var(--asz,34px)}
+.num{display:inline-flex;align-items:center;justify-content:center;min-width:1.7em;height:1.7em;padding:0 .4em;
+  border-radius:50%;background:var(--jade-soft);font-family:var(--ui);font-size:.62em;font-weight:700;
+  color:var(--jade);margin-left:10px;vertical-align:middle}
+.ayah .cpy{position:absolute;bottom:8px;left:8px;font-family:var(--ui);font-size:.5em;color:var(--muted);
+  padding:5px 10px;border-radius:8px;background:var(--ink-3);font-weight:600;direction:ltr}
+.ayah .cpy:active{background:var(--jade);color:#fff}
+.ayah.cur{background:var(--jade-soft);border-color:var(--jade)}
+.ayah.cur .num{background:var(--jade);color:#fff}
+.ayah.stk{background:var(--gold-soft);border-color:var(--gold)}
+.ayah.stk .num{background:var(--gold);color:#fff}
+.ayah.veiled{filter:blur(7px);opacity:.4;pointer-events:none}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- player sub-view header (back arrow) ---- */
+.subhead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.subhead .back{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;
+  background:var(--ink-2);border:1px solid var(--line);box-shadow:var(--shadow);flex:none}
+.subhead .back:active{background:var(--jade-soft)}
+.subhead .back svg{width:22px;height:22px;stroke:var(--parchment)}
+.subhead h3{margin:0;font-size:1em;font-weight:700}
+.subhead small{display:block;font-size:.72em;color:var(--muted);font-weight:500}
+
+/* ---- transport bar (sits above bottom nav) ---- */
+#bar{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  bottom:calc(var(--navh) + env(safe-area-inset-bottom));
+  background:var(--ink-2);border-top:1px solid var(--line);box-shadow:0 -2px 10px rgba(20,40,40,.06);
+  padding:12px var(--pad);z-index:20}
+#bar[hidden]{display:none}
+#prog{height:5px;background:var(--ink-3);border-radius:3px;overflow:hidden;margin-bottom:10px;cursor:pointer}
+#progfill{height:100%;width:0;background:var(--jade)}
+#stat{display:flex;justify-content:space-between;align-items:center;font-size:.78em;color:var(--muted);margin-bottom:10px;gap:8px}
+#phase{font-weight:700;letter-spacing:.04em;text-transform:uppercase;flex:none}
+#pos{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#phase.p-stack{color:var(--gold)} #phase.p-rep{color:var(--jade)}
+#phase.p-round{color:var(--parchment)} #phase.p-listen{color:var(--parchment)} #phase.p-prep{color:var(--amber)}
+.pbtns{display:flex;gap:6px}.pbtns .btn{flex:1;padding:14px 4px;font-size:.92em}#play{flex:1.7}
+#prev,#next{flex:.7;font-size:1.2em;padding:14px 2px}
+#prepbar{height:5px;background:var(--ink-3);border-radius:3px;overflow:hidden;margin-bottom:10px}
+#prepbar[hidden]{display:none}
+#prepfill{height:100%;width:0;background:var(--amber);transition:width .2s}
+
+/* ---- cards (saved lists, blocks) ---- */
+.card{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:10px;
+  display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.card .g{flex:1;min-width:0}.card b{display:block;font-size:1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card small{color:var(--muted);font-size:.85em}
+.card-toprow{display:flex;align-items:baseline;gap:8px}
+.card-toprow b{flex:1;min-width:0}
+.card-ts{flex:none;font-size:.72em;color:var(--muted);opacity:.8;white-space:nowrap}
+.card .x{color:var(--red);font-size:1.4em;padding:6px 10px;flex:none;border-radius:8px}
+.card .x:active{background:var(--red-soft)}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:.9em;line-height:1.7}
+
+/* ---- activity log ---- */
+.logbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.logbar span{font-size:.74em;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.logbar button{font-size:.78em;color:var(--jade);font-weight:700;padding:4px 10px;border-radius:8px}
+.logbar button:active{background:var(--jade-soft)}
+.log{border:1px solid var(--line);border-radius:14px;background:var(--ink-2);padding:12px 14px;
+  margin-bottom:16px;margin-right:40px;font-size:.84em;max-height:170px;overflow-y:auto;line-height:1.7;
+  font-variant-numeric:tabular-nums;box-shadow:var(--shadow);overscroll-behavior:contain}
+.logbar{margin-right:40px}
+.log .li{display:flex;gap:8px;padding:1px 0}
+.log .li i{flex:none;width:14px;font-style:normal;text-align:center}
+.log .li i.ok{color:var(--jade)} .log .li i.er{color:var(--red)} .log .li i.in{color:var(--muted)}
+.log .li .msg{flex:1;min-width:0;word-break:break-word}
+.log .li.err-line .msg{color:var(--red)}
+
+/* ---- toast ---- */
+#toast{position:fixed;left:50%;bottom:calc(var(--navh) + 96px);transform:translate(-50%,14px);
+  background:var(--parchment);color:#fff;border:none;padding:13px 20px;border-radius:24px;font-size:.9em;z-index:40;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:88vw;text-align:center;box-shadow:var(--shadow-lift)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---- diagnostics ---- */
+.diag{font-size:.85em;border-bottom:1px solid var(--line);padding:12px 0;display:flex;gap:10px;align-items:flex-start}
+.diag i{font-style:normal;flex:none;width:16px;font-weight:700}
+.diag .ok{color:var(--jade)} .diag .no{color:var(--red)} .diag .mb{color:var(--amber)}
+.diag div{flex:1;min-width:0} .diag small{display:block;color:var(--muted);word-break:break-word}
+#ver{text-align:center;color:var(--muted);font-size:.78em;padding:24px 0 6px;letter-spacing:.03em}
+.danger{border:1px solid var(--red-soft);background:var(--red-soft);border-radius:14px;padding:15px;margin-top:10px}
+
+/* ---- bottom navigation ---- */
+#nav{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);background:var(--ink-2);border-top:1px solid var(--line);
+  display:flex;z-index:30;box-shadow:0 -2px 10px rgba(20,40,40,.05)}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:var(--muted);font-size:.62em;font-weight:600;letter-spacing:.02em;padding:0}
+#nav button svg{width:24px;height:24px;stroke:var(--muted);fill:none;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+#nav button[aria-selected="true"]{color:var(--jade)}
+#nav button[aria-selected="true"] svg{stroke:var(--jade)}
+#nav button[aria-selected="true"] .dotpip{fill:var(--jade)}
+#nav button{position:relative}
+.navpip{position:absolute;top:9px;right:calc(50% - 18px);width:9px;height:9px;border-radius:50%;
+  background:var(--red);border:1.5px solid var(--ink-2)}
+
+/* ---- update banner ---- */
+#updbar{flex:none;background:var(--jade);color:#fff;display:flex;align-items:center;gap:10px;
+  padding:12px var(--pad);box-shadow:var(--shadow)}
+#updbar[hidden]{display:none}
+#updbar span{flex:1;font-size:.9em;font-weight:600}
+#updbar #updbtn{background:#fff;color:var(--jade);font-weight:700;padding:9px 18px;border-radius:22px;box-shadow:var(--shadow)}
+#updbar #upddismiss{color:#fff;font-size:1.05em;padding:6px 10px;opacity:.9}
+
+/* ---- guide / manual ---- */
+.guide{line-height:1.65}
+.guide h3{color:var(--jade);font-size:1.05em;margin:22px 0 8px}
+.guide h4{font-size:.95em;margin:16px 0 6px}
+.guide p{margin:8px 0;color:var(--parchment)}
+.guide ul{margin:8px 0;padding-inline-start:22px}
+.guide li{margin:5px 0}
+.guide .step{background:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;box-shadow:var(--shadow)}
+.guide code{background:var(--ink-3);padding:2px 6px;border-radius:6px;font-size:.85em}
+.sublink{display:flex;align-items:center;justify-content:space-between;width:100%;padding:15px;
+  background:var(--ink-2);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font-weight:600;margin-top:8px}
+.sublink:active{background:var(--jade-soft)}
+.sublink svg{width:20px;height:20px;stroke:var(--muted);fill:none;stroke-width:2}
+
+/* ---- Read tab: search bar, reader, results ---- */
+.searchwrap{position:sticky;top:0;background:var(--ink);padding-bottom:12px;margin-bottom:4px;z-index:5}
+.searchwrap.collapsed .searchbar{padding:0}
+.searchwrap.collapsed .searchbar input,
+.searchwrap.collapsed .searchbar .ic{display:none}
+.searchwrap.collapsed .searchacts{display:none}
+.searchwrap.collapsed #akbd{display:none}
+.searchpill{display:none;align-items:center;gap:8px;background:var(--ink-2);border:1px solid var(--line);
+  border-radius:24px;padding:10px 16px;box-shadow:var(--shadow);cursor:pointer;color:var(--muted);font-size:.92em}
+.searchpill svg{width:18px;height:18px;stroke:var(--jade);fill:none;stroke-width:2}
+.searchwrap.collapsed .searchpill{display:flex}
+.ctx-open .searchwrap{display:none}
+/* fixed one-row context bar — never scrolls away */
+#ctxbar{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  background:var(--ink-2);border-bottom:1px solid var(--line);box-shadow:var(--shadow);
+  display:flex;align-items:center;gap:10px;padding:10px var(--pad);z-index:25;
+  padding-top:calc(10px + env(safe-area-inset-top))}
+#ctxbar[hidden]{display:none}
+#ctxbar .back{flex:none;width:40px;height:40px;border-radius:50%;background:var(--jade);
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+#ctxbar .back svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+#ctxbar .back:active{opacity:.8}
+#ctxbarlabel{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  font-size:.88em;font-weight:600;color:var(--parchment)}
+#ctxbarlabel span{color:var(--muted);font-weight:400}
+/* push content down when ctxbar is showing */
+.ctx-open #ctxtext{margin-top:64px}
+.searchbar{display:flex;gap:8px;align-items:center;background:var(--ink-2);border:1px solid var(--line);
+  border-radius:14px;padding:6px 8px 6px 14px;box-shadow:var(--shadow)}
+.searchbar input{flex:1;min-width:0;border:none;background:none;color:var(--parchment);font-size:1em;padding:8px 0}
+.searchbar input:focus{outline:none}
+.searchbar .ic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.searchbar .ic svg{width:22px;height:22px;stroke:var(--jade);fill:none;stroke-width:2}
+.searchbar .ic:active{background:var(--jade-soft)}
+.searchbar .ic.rec{background:var(--red);}.searchbar .ic.rec svg{stroke:#fff}
+.searchbar .ic.on{background:var(--jade-soft)}
+/* per-ayah inline player */
+.ayah-play{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.ayah-playbtn{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;
+  background:var(--jade);border:none;flex:none;box-shadow:var(--shadow);transition:background .15s,transform .1s}
+.ayah-playbtn:active{transform:scale(.92)}
+.ayah-playbtn svg{width:18px;height:18px;fill:#fff}
+.ayah-playbtn.playing{background:var(--red)}
+.rep-chips{display:flex;gap:6px}
+.rep-chip{padding:8px 14px;border-radius:20px;font-size:.82em;font-weight:700;background:var(--ink-3);
+  border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.rep-chip.active{background:var(--jade);color:#fff;border-color:var(--jade)}
+.rep-chip:active{transform:scale(.95)}
+.flow-hint{font-size:.76em;color:var(--jade);margin-top:6px;padding-left:2px;font-weight:600}
+.ayah-prog{flex:1;height:4px;background:var(--ink-3);border-radius:2px;overflow:hidden;min-width:30px}
+.ayah-progfill{height:100%;width:0%;background:var(--jade);transition:width .3s linear}
+/* fixed now-playing bar */
+#nowbar{position:fixed;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  bottom:calc(var(--navh) + env(safe-area-inset-bottom));z-index:22;
+  background:var(--parchment);color:#fff;
+  display:flex;align-items:center;gap:10px;padding:10px var(--pad);
+  box-shadow:0 -2px 12px rgba(20,40,40,.18);cursor:pointer}
+#nowbar[hidden]{display:none}
+#nowbar .nbinfo{flex:1;min-width:0}
+#nowbar .nbref{font-size:.88em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nowbar .nbrep{font-size:.75em;opacity:.75;margin-top:1px}
+#nowbar .nbstop{background:#fff;color:var(--parchment);font-weight:700;padding:8px 16px;
+  border-radius:20px;white-space:nowrap;flex:none;font-size:.85em}
+
+/* collapsed saved items — one line, expand on tap */
+.sitem{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
+.sitem-head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
+.sitem-head:active{background:var(--jade-soft)}
+.sitem-ref{flex:1;min-width:0}
+.sitem-toprow{display:flex;align-items:baseline;gap:8px}
+.sitem-ref b{display:block;font-size:.9em;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.sitem-ts{flex:none;font-size:.72em;color:var(--muted);opacity:.8;white-space:nowrap}
+.sitem-ref small{display:block;font-size:.82em;color:var(--muted);direction:rtl;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--arabic)}
+.sitem-chev{flex:none;color:var(--muted);transition:transform .15s}
+.sitem.open .sitem-chev{transform:rotate(90deg)}
+.sitem-body{display:none;padding:0 14px 14px;border-top:1px solid var(--line)}
+.sitem.open .sitem-body{display:block}
+.sitem-body .vtext{direction:rtl;text-align:right;font-family:var(--arabic);font-size:calc(var(--asz,34px)*.82);line-height:2.2;padding:12px 0 10px}
+.sitem-acts{display:flex;gap:8px;flex-wrap:wrap}
+.sitem-acts button{padding:9px 14px;border-radius:9px;font-size:.82em;font-weight:600}
+.bkbtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:var(--ink-3);border:1px solid var(--line);flex:none}
+.bkbtn svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;transition:stroke .15s,fill .15s}
+.bkbtn.on{background:var(--gold-soft);border-color:var(--gold)}
+.bkbtn.on svg{stroke:var(--gold);fill:var(--gold)}
+/* search bar collapse */
+#qcollapse{font-size:1.2em;color:var(--muted);width:40px;height:40px}
+.kbdic{font-family:var(--arabic);font-size:1.6em;font-weight:700;color:var(--jade);
+  background:var(--ink-2);border:2px solid var(--jade);border-radius:10px;
+  width:46px;height:46px;box-shadow:0 3px 0 var(--jade);letter-spacing:0}
+.kbdic.on{background:var(--jade);color:#fff;box-shadow:none;transform:translateY(2px)}
+/* amber highlight for matched search text */
+.hl{background:#F5C842 !important;border-radius:3px;color:#1C2A2A !important;padding:0 2px;display:inline;unicode-bidi:inherit}
+.searchacts{display:flex;gap:8px;margin-top:8px}
+.searchacts .btn{flex:1;padding:11px}
+.searchacts .btn.cv{flex:.7;font-family:var(--arabic)}
+
+/* ---- in-app Arabic keyboard: large, bold, high-contrast keys ---- */
+#akbd{margin-top:10px;background:var(--ink-3);border:1px solid var(--line);border-radius:14px;
+  padding:8px;box-shadow:var(--shadow)}
+#akbd[hidden]{display:none}
+.akrow{display:flex;gap:6px;margin-bottom:6px;justify-content:center;direction:rtl}
+.akrow:last-child{margin-bottom:0}
+.akey{flex:1;min-width:0;height:52px;border-radius:10px;background:var(--ink-2);border:1px solid var(--line);
+  font-family:var(--arabic);font-size:1.7em;font-weight:700;color:var(--parchment);
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);position:relative;
+  padding:0;line-height:1}
+.akey:active{background:var(--jade);color:#fff;transform:scale(.95)}
+.akey.wide{flex:1.6}
+.akey.act{font-family:var(--ui);font-size:.8em;font-weight:600;color:var(--jade)}
+.akey.var::after{content:'';position:absolute;top:6px;left:8px;width:6px;height:6px;border-radius:50%;background:var(--gold)}
+/* variant sub-panel */
+#akbd .varpanel{display:flex;gap:8px;justify-content:center;direction:rtl;padding:4px 0 10px;margin-bottom:6px;
+  border-bottom:1px dashed var(--line);flex-wrap:wrap}
+#akbd .varpanel .akey{flex:0 0 auto;width:58px}
+.varhint{font-size:.72em;color:var(--muted);text-align:center;margin-bottom:8px;direction:ltr}
+.readtools{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.readtools .ctl{flex:1}
+.reslabel{font-size:.8em;color:var(--muted);font-weight:600;margin:4px 2px 10px}
+.vrow{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)}
+.vrow[data-clickable]{cursor:pointer}.vrow[data-clickable]:active{background:var(--jade-soft)}
+.vrow .vtext{direction:rtl;text-align:right;font-family:var(--arabic);font-size:calc(var(--asz,34px)*.86);line-height:2.3}
+.vref{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+.vref .r{flex:1;font-size:.82em;color:var(--muted);font-weight:600}
+.vref button{font-size:.78em;color:var(--jade);font-weight:700;padding:6px 12px;border-radius:9px;background:var(--jade-soft)}
+.vref button:active{background:var(--jade);color:#fff}
+.vref button.sv{color:var(--gold);background:var(--gold-soft)}
+.vref button.sv:active{background:var(--gold);color:#fff}
+.vref button.sv.on{background:var(--gold);color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand"><b>Hifz</b><small>Stacked Memorizer</small></span>
+  <span id="hdrver" style="font-size:.65em;color:var(--muted);letter-spacing:.02em;margin-left:auto;margin-right:8px"></span>
+  <span id="netdot"></span>
+</header>
+
+<div id="updbar" hidden>
+  <span>A newer version is ready.</span>
+  <button id="updbtn">Update</button>
+  <button id="upddismiss" aria-label="Dismiss">✕</button>
+</div>
+
+<div id="ctxbar" hidden>
+  <button class="back" id="ctxback" aria-label="Back to results">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <span id="ctxbarlabel">Reading</span>
+</div>
+
+<div id="nowbar" hidden>
+  <div class="nbinfo">
+    <div class="nbref" id="nbref">—</div>
+    <div class="nbrep" id="nbrep"></div>
+  </div>
+  <button class="nbstop" id="nbstop">■ Stop</button>
+</div>
+
+<main>
+
+<!-- ================= READ + SEARCH ================= -->
+<section class="panel" id="p-rd">
+  <div class="searchwrap collapsed" id="searchwrap">
+    <div class="searchpill" id="searchpill">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      Search the Qur'an…
+    </div>
+    <div class="searchbar">
+      <input id="q" type="text" placeholder="Search the Qur'an…" autocomplete="off">
+      <button class="ic kbdic" id="qkbd" aria-label="Arabic keyboard">ا</button>
+      <button class="ic" id="qmic" aria-label="Voice search (Arabic)">
+        <svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+      </button>
+      <button class="ic" id="qcollapse" aria-label="Collapse search" style="font-size:1.1em;color:var(--muted)">✕</button>
+    </div>
+    <div class="searchacts">
+      <button class="btn cv" id="qconv">→ ع</button>
+      <button class="btn pri" id="qsearch">Search</button>
+      <button class="btn" id="qclear">Clear</button>
+      <button class="btn" id="qreset" style="color:var(--red)">Reset</button>
+    </div>
+    <div id="akbd" hidden></div>
+  </div>
+
+  <div id="rd-browse">
+    <div id="continuechip" hidden style="margin-bottom:12px">
+      <button class="sublink" id="continuebtn" style="background:var(--jade-soft);border-color:var(--jade)">
+        <span id="continuelabel">Continue reading</span>
+        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="readtools">
+      <input class="ctl" id="rdfilter" type="search" inputmode="search" autocomplete="off" placeholder="Go to surah — name or number">
+    </div>
+    <select class="ctl" id="rdsurah" style="margin-bottom:10px"></select>
+    <div class="row" style="margin-bottom:14px">
+      <button class="btn dgr" id="rdclear">Clear</button>
+    </div>
+    <div id="rdtext"><div class="empty">Pick a surah to read, or search above.</div></div>
+  </div>
+
+  <div id="rd-results" hidden>
+    <div class="reslabel" id="reslabel"></div>
+    <div id="reslist"></div>
+  </div>
+
+  <div id="rd-ctx" hidden>
+    <div id="ctxtext"></div>
+  </div>
+</section>
+<section class="panel" id="p-sel" hidden>
+  <div class="field">
+    <label class="lbl" for="sfilter">Surah</label>
+    <input class="ctl" id="sfilter" type="search" inputmode="search" autocomplete="off"
+           placeholder="Type a name or number — يس · yaseen · 36" style="margin-bottom:10px">
+    <select class="ctl" id="surah" size="1"><option>Loading…</option></select>
+    <div class="hint" id="sfhint" hidden></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Ayat range</label>
+    <div class="row">
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">First ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="from">–</button><input id="from" type="number" inputmode="numeric" min="1" max="286" value="1"><button data-step="1" data-t="from">+</button></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">Last ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="to">–</button><input id="to" type="number" inputmode="numeric" min="1" max="286" value="7"><button data-step="1" data-t="to">+</button></div>
+      </div>
+    </div>
+    <div class="hint" id="rangehint"></div>
+  </div>
+  <div class="row" style="margin-bottom:14px">
+    <button class="btn" id="preview">Show text</button>
+  </div>
+  <div class="readout" id="budget"><b id="bmain">—</b><small id="bnote"></small></div>
+
+  <h2>Repetition</h2>
+  <div class="field">
+    <label class="lbl">Each ayah repeats</label>
+    <div class="stepper"><button data-step="-1" data-t="rep">–</button><input id="rep" type="number" inputmode="numeric" min="1" max="20" value="3"><button data-step="1" data-t="rep">+</button></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Whole range repeats</label>
+    <div class="stepper"><button data-step="-1" data-t="rng">–</button><input id="rng" type="number" inputmode="numeric" min="0" max="20" value="5"><button data-step="1" data-t="rng">+</button></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Stack depth — <span id="sdlbl">all previous</span></label>
+    <input type="range" id="sd" min="1" max="20" value="20">
+    <div class="hint">How many earlier ayat replay before each new ayah.</div>
+  </div>
+
+  <div class="row" style="margin-top:22px">
+    <button class="btn pri" id="go">Start</button>
+    <button class="btn" id="save">Save range</button>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn dgr" id="clr">Clear</button>
+  </div>
+</section>
+
+<!-- ================= PLAYER ================= -->
+<section class="panel" id="p-drl" hidden>
+  <div class="subhead">
+    <button class="back" id="pback" aria-label="Back to setup">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div><h3 id="ptitle">Now playing</h3><small id="psub"></small></div>
+  </div>
+  <div id="logwrap" hidden>
+    <div class="logbar"><span>Activity</span><button id="logcopy">Copy</button></div>
+    <div id="log" class="log"></div>
+  </div>
+  <div id="exprow" hidden style="margin-bottom:16px">
+    <div class="lbl">Save to your phone</div>
+    <div class="row">
+      <button class="btn" id="explisten">For listening</button>
+      <button class="btn pri" id="expmusi">For Musicolet</button>
+    </div>
+    <div class="hint" id="exphint"></div>
+    <div class="hint" id="expnote" style="margin-top:8px">The Musicolet file has the verses <b>inside the MP3</b> — Musicolet shows each ayah as it's recited. “For listening” is a plain audio file.</div>
+    <button class="btn" id="expmp3" hidden></button>
+  </div>
+  <div id="copyall" hidden style="margin-bottom:6px">
+    <button class="btn" id="copyallbtn">Copy all verses</button>
+  </div>
+  <div id="text"><div class="empty">Choose a surah and range, then tap Start.<br>Or build a listening track on Stitch.</div></div>
+</section>
+
+<!-- ================= STITCH ================= -->
+<section class="panel" id="p-stc" hidden>
+  <div class="hint" style="margin-bottom:14px">A plain listening track — each ayah once, in order, continuously, and blocks may cross surahs. Every block opens with a Bismillah — a marker, not a recitation — so you always hear where one block ends and the next begins, even back-to-back ones. No repeats, so it stays small: roughly 1 MB per minute.</div>
+
+  <div class="field">
+    <label class="lbl" for="ssfilter">Add a block</label>
+    <input class="ctl" id="ssfilter" type="search" inputmode="search" autocomplete="off"
+           placeholder="Type a name or number — يس · yaseen · 36" style="margin-bottom:10px">
+    <select class="ctl" id="ssurah" style="margin-bottom:10px"></select>
+    <div class="hint" id="ssfhint" hidden style="margin-bottom:10px"></div>
+    <div class="row">
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">First ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="sfrom">–</button><input id="sfrom" type="number" inputmode="numeric" min="1" max="286" value="1"><button data-step="1" data-t="sfrom">+</button></div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="sublbl">Last ayah</div>
+        <div class="stepper"><button data-step="-1" data-t="sto">–</button><input id="sto" type="number" inputmode="numeric" min="1" max="286" value="10"><button data-step="1" data-t="sto">+</button></div>
+      </div>
+    </div>
+    <div class="hint" id="ssrangehint"></div>
+  </div>
+  <div class="row" style="margin-bottom:14px">
+    <button class="btn" id="spreview">Show text</button>
+    <button class="btn pri" id="sadd">Add block</button>
+  </div>
+
+  <h2>Blocks</h2>
+  <div id="blocks"></div>
+  <div class="readout" id="sreadout"><b id="smain">No blocks yet</b><small id="snote"></small></div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="sprevall">Preview all text</button>
+  </div>
+
+  <div class="row" style="margin-top:14px">
+    <button class="btn pri" id="sbuild">Build &amp; play</button>
+    <button class="btn" id="sexp">Build &amp; save MP3</button>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="srecipe">Save recipe</button>
+    <button class="btn dgr" id="sclearb">Clear blocks</button>
+  </div>
+</section>
+
+<!-- ================= SAVED ================= -->
+<!-- ================= MORE (hub) ================= -->
+<section class="panel" id="p-more" hidden>
+  <button id="updrow" class="sublink" hidden style="border-color:var(--jade);color:var(--jade);margin-bottom:18px">Update available — tap to install
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <h2>More</h2>
+  <button class="sublink" id="goSaved" style="margin-bottom:10px">Saved — ranges, recipes &amp; verses
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="sublink" id="goSettings" style="margin-bottom:10px">Settings
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="sublink" id="goGuide">User guide &amp; how-to
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <h2 style="margin-top:26px">App</h2>
+  <a class="sublink" id="appLink" href="https://aneesma1.github.io/hifz/" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;cursor:pointer">
+    <span style="display:flex;flex-direction:column;align-items:flex-start;gap:2px">
+      <span>Hifz — Stacked Memorizer</span>
+      <small style="color:var(--muted);font-weight:400">aneesma1.github.io/hifz</small>
+    </span>
+    <svg viewBox="0 0 24 24"><path d="M7 17L17 7M7 7h10v10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </a>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="appCopy">Copy link</button>
+    <button class="btn" id="appShare">Share</button>
+  </div>
+</section>
+
+<!-- ================= SAVED ================= -->
+<section class="panel" id="p-sav" hidden>
+  <div class="subhead">
+    <button class="back" id="savback" aria-label="Back to More">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div><h3>Saved</h3><small>Ranges, recipes &amp; verses</small></div>
+  </div>
+  <h2>Bookmarks</h2>
+  <div id="bookmarks"></div>
+  <h2>Saved verses</h2>
+  <div id="verses"></div>
+  <h2>Drill ranges</h2>
+  <div id="lists"></div>
+  <h2>Stitch recipes</h2>
+  <div id="recipes"></div>
+  <h2>Backup</h2>
+  <div class="hint">One file holding your ranges, recipes, verses and settings. It lives outside the browser, so Reset everything cannot touch it.</div>
+  <div class="row" style="margin-top:10px">
+    <button class="btn" id="exp">Export backup</button>
+    <button class="btn" id="imp">Import backup</button>
+  </div>
+  <input type="file" id="impf" accept="application/json,.json" hidden>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section class="panel" id="p-set" hidden>
+  <div class="subhead">
+    <button class="back" id="setback" aria-label="Back to More">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div><h3>Settings</h3><small>Reciter, playback, storage</small></div>
+  </div>
+  <h2>Reciter</h2>
+  <select class="ctl" id="qari"></select>
+  <div class="hint" id="qhint"></div>
+
+  <h2>Drill pause</h2>
+  <div class="seg" id="gapmode" role="radiogroup">
+    <button data-v="none"  role="radio">No gap</button>
+    <button data-v="fixed" role="radio">Fixed gap</button>
+    <button data-v="echo"  role="radio">Match ayah length</button>
+  </div>
+  <div class="field" id="gapwrap" style="margin-top:12px">
+    <label class="lbl">Fixed gap — <span id="gaplbl">1.0s</span></label>
+    <input type="range" id="gap" min="0.5" max="5" step="0.5" value="1">
+  </div>
+  <div class="hint" id="gaphint"></div>
+
+  <h2>Reading</h2>
+  <div class="sw"><div><b>Highlight current ayah</b><p>Marks what is being recited now.</p></div><button class="tog" id="t-hl" role="switch"></button></div>
+  <div class="sw"><div><b>Veil ayat ahead</b><p>Blurs what comes next so your eye can't run ahead.</p></div><button class="tog" id="t-veil" role="switch"></button></div>
+  <div class="sw"><div><b>Play Bismillah each round</b><p>Drill only. Stitched tracks always open a new surah with it.</p></div><button class="tog" id="t-bism" role="switch"></button></div>
+  <div class="field" style="margin-top:14px">
+    <label class="lbl">Arabic size — <span id="aszlbl">34px</span></label>
+    <input type="range" id="asz" min="20" max="72" step="1" value="34">
+    <div class="ayah" style="pointer-events:none;margin-top:4px"><span class="t" id="aszdemo"></span><span class="num">1</span></div>
+  </div>
+  <div class="field">
+    <label class="lbl">Interface size — <span id="uiszlbl">17px</span></label>
+    <input type="range" id="uisz" min="14" max="24" step="1" value="17">
+    <div class="hint">Scales every label, button and menu — everything but the Arabic.</div>
+  </div>
+
+  <h2>Playback</h2>
+  <div class="sw"><div><b>Keep screen awake</b><p>Only a fallback. Stitched audio should survive a locked screen on its own.</p></div><button class="tog" id="t-wake" role="switch"></button></div>
+  <div class="sw"><div><b>Verses in exported MP3</b><p>Embeds timed verses and saves matching .lrc and .srt files, so a player like Musicolet (phone) or VLC (PC) shows each ayah as it's recited. Adds a small zip.</p></div><button class="tog" id="t-lyrics" role="switch"></button></div>
+
+  <h2>Storage</h2>
+  <div class="hint" id="cinfo">—</div>
+  <button class="btn dgr" id="clra" style="width:100%;margin-top:10px">Delete all downloaded recitation — frees space</button>
+  <div class="danger">
+    <b style="color:var(--red)">Reset everything</b>
+    <div class="hint">Wipes downloaded audio, cached text, saved ranges, recipes and settings. Export a backup first — this cannot be undone.</div>
+    <button class="btn dgr" id="reset" style="width:100%;margin-top:10px">Reset everything</button>
+  </div>
+
+  <h2>Help</h2>
+  <button class="sublink" id="openguide">User guide &amp; how-to
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <h2>Diagnostics</h2>
+  <div id="diag"></div>
+  <button class="btn" id="rediag" style="margin-top:12px;width:100%">Run checks again</button>
+
+  <div id="ver"></div>
+</section>
+
+<!-- ================= GUIDE ================= -->
+<section class="panel" id="p-gde" hidden>
+  <div class="subhead">
+    <button class="back" id="gback" aria-label="Back to settings">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div><h3>User guide</h3><small>How Hifz works, end to end</small></div>
+  </div>
+  <div class="guide">
+    <p>Hifz helps you memorise the Qur'an by <b>listening in a structured, repeating pattern</b> — the "stacked" method — and by making plain listening tracks. Everything works offline once loaded, and audio keeps playing with the screen locked.</p>
+
+    <h3>The stacked method</h3>
+    <p>Rather than replaying a whole passage over and over, stacking builds it up ayah by ayah, replaying what came before each new one so the joins stick. For ayat 1–5 with "each ayah ×3" and "range ×5", you hear:</p>
+    <div class="step">Ayah 1 ×3 → (1) then 2 ×3 → (1,2) then 3 ×3 → (1,2,3) then 4 ×3 → (1,2,3,4) then 5 ×3 → then the whole 1→5 five times.</div>
+    <p>The bracketed part is the <b>stack</b> — earlier ayat played once before each new ayah. You control how deep it goes.</p>
+
+    <h3>Memorize tab</h3>
+    <h4>Choosing a passage</h4>
+    <ul>
+      <li>Type in the surah box to filter — English name, Arabic (with or without harakat), the meaning, or the number. E.g. <code>yaseen</code>, <code>يس</code>, <code>36</code>, or <code>cave</code>.</li>
+      <li>Set the ayah range with the two boxes.</li>
+      <li><b>Show text</b> loads the verses without downloading audio — check the range is right first.</li>
+      <li><b>Clear</b> resets the surah, range and every repetition setting back to their defaults. Doesn't touch anything you've saved.</li>
+    </ul>
+    <h4>Repetition</h4>
+    <ul>
+      <li><b>Each ayah repeats</b> — how many times a single ayah plays before moving on.</li>
+      <li><b>Whole range repeats</b> — how many times the full passage replays at the end.</li>
+      <li><b>Stack depth</b> — how many earlier ayat replay before each new one. "All previous" is the fullest.</li>
+    </ul>
+    <h4>Playing</h4>
+    <p>Tap <b>Start</b>. Hifz downloads the ayat (kept for next time), joins them into one continuous track, and plays. The verses show on screen and the current one is highlighted. A back arrow returns you to the setup.</p>
+    <p>If a track is long and the browser blocks auto-start, you'll see <b>Ready — tap Play</b>. That's normal; one tap begins it.</p>
+
+    <h3>Stitch tab</h3>
+    <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and every block opens with a Bismillah — even two back-to-back blocks in the same surah, and even a block from Surah 9 (which has no Bismillah of its own; here it's just a marker, not a recitation) — so a listener always hears where one block ends and the next begins, whether played straight through or saved separately. The one exception is a block starting at Al-Fātiḥah 1:1, since that ayah already is the Bismillah. Good for revision or just listening.</p>
+
+    <h3>Saving to your phone or PC's player</h3>
+    <p>After a track is built, two buttons appear:</p>
+    <ul>
+      <li><b>For listening</b> — a plain MP3.</li>
+      <li><b>For Musicolet</b> — an MP3 with the <b>verses embedded inside it</b>, plus matching <code>.lrc</code> and <code>.srt</code> files, delivered as one zip.</li>
+    </ul>
+    <h4>Setting up Musicolet</h4>
+    <div class="step">1. Export "For Musicolet" → a zip lands in Downloads.<br>2. Extract the zip into a folder.<br>3. Open that folder in Musicolet and play.<br>4. Verses appear on screen and lock screen as each ayah is recited.</div>
+    <p>The verses ride inside the MP3, so even without the <code>.lrc</code> a player that reads embedded lyrics will show them. The <code>.lrc</code> is there as a reliable fallback.</p>
+    <h4>Watching verses on a PC</h4>
+    <p>Windows Media Player and Media Player Classic won't show any of this — they don't read embedded lyrics or <code>.lrc</code>/<code>.srt</code> files. <b>VLC</b> can, using the <code>.srt</code>: extract the zip so the <code>.srt</code> sits next to its matching <code>.mp3</code> in the same folder (same file name — VLC pairs them automatically), then turn on <b>Audio ▸ Visualizations</b> before playing. VLC only draws subtitles onto a visual surface, so without a visualization running there's nowhere for the verse to appear even with the file in place.</p>
+
+    <h3>Copying verses</h3>
+    <p>On the reading screen, each ayah has a small <b>copy</b> button, and <b>Copy all verses</b> copies the whole passage (with verse numbers) as Arabic text.</p>
+
+    <h3>Settings worth knowing</h3>
+    <ul>
+      <li><b>Reciter</b> — four to choose from.</li>
+      <li><b>Drill pause</b> — silence after each ayah: none, a fixed length, or as long as the ayah (to recite it back).</li>
+      <li><b>Veil ayat ahead</b> — blurs upcoming ayat so your eye can't run ahead.</li>
+      <li><b>Arabic / Interface size</b> — scale the text to taste.</li>
+      <li><b>Verses in exported MP3</b> — the embedded-lyrics feature above.</li>
+    </ul>
+
+    <h3>Backups &amp; storage</h3>
+    <p>Downloaded audio is kept on your device so it never re-downloads. <b>Delete all downloaded recitation</b> frees that space. <b>Export backup</b> (Saved tab) saves your ranges, recipes and settings to a file that survives even a full reset — keep one.</p>
+
+    <h3>If something goes wrong</h3>
+    <p>The <b>Activity</b> log on the playing screen shows each step and any error with a code (e.g. <code>NET_AUDIO_404</code>). Tap <b>Copy</b> there to grab the whole log if you need help.</p>
+  </div>
+</section>
+
+</main>
+
+<div id="bar" hidden>
+  <div id="prepbar" hidden><div id="prepfill"></div></div>
+  <div id="prog"><div id="progfill"></div></div>
+  <div id="stat"><span id="phase">Ready</span><span id="pos"></span></div>
+  <div class="pbtns">
+    <button class="btn" id="prev">‹</button>
+    <button class="btn pri" id="play">Play</button>
+    <button class="btn" id="next">›</button>
+    <button class="btn dgr" id="stop">Stop</button>
+    <button class="btn" id="newsess" title="New session">New</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<nav id="nav" role="tablist">
+  <button role="tab" data-tab="rd" aria-selected="true">
+    <svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h5a2 2 0 012 2v15a2 2 0 00-2-2H3z"/><path d="M21 5a2 2 0 00-2-2h-5a2 2 0 00-2 2v15a2 2 0 012-2h5z"/></svg>
+    Read
+  </button>
+  <button role="tab" data-tab="sel" aria-selected="false">
+    <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 012-2h9l5 5v11a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M8 8h6M8 12h8M8 16h5"/></svg>
+    Memorize
+  </button>
+  <button role="tab" data-tab="stc" aria-selected="false">
+    <svg viewBox="0 0 24 24"><path d="M12 3l8 4-8 4-8-4 8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 17l8 4 8-4"/></svg>
+    Stitch
+  </button>
+  <button role="tab" data-tab="more" aria-selected="false">
+    <span class="navpip" id="setpip" hidden></span>
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    More
+  </button>
+</nav>
+
+<script>
+"use strict";
+/* ============================================================================
+   Hifz v3
+   Text : api.alquran.cloud (quran-uthmani)   Audio: everyayah.com (per ayah)
+
+   Playback is STITCHED: a session becomes one continuous MP3 before it plays.
+   v1 swapped the audio source between ayat, and a backgrounded page is not
+   allowed to start a new source — so audio died the moment the screen locked.
+   One source, started once, needs no JavaScript at all while it plays, so
+   there is nothing left to throttle or block.
+   ========================================================================== */
+
+const APP_URL = 'https://aneesma1.github.io/hifz/';
+const VERSION = 'v34';
+const BUILD   = '2026-10-23 07:04 UTC';
+
+const RECITERS = [
+  {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
+  {id:'Minshawy_Murattal_128kbps',   name:'Mohamed Siddiq El-Minshawi', bps:128},
+  {id:'Alafasy_128kbps',             name:'Mishary Rashid Alafasy',    bps:128},
+  {id:'Abdul_Basit_Murattal_192kbps',name:'Abdul Basit (Murattal)',    bps:192}
+];
+const API = 'https://api.alquran.cloud/v1';
+const AUD = 'https://everyayah.com/data';
+const WARN_MB = 25, MAX_MB = 60, PART_MB = 22;
+
+// Digital-silence MPEG1 Layer III frames, 44.1kHz stereo. 1152 samples =
+// 26.122ms each; repeat one to build a gap of any length.
+// One PER BITRATE, matched to the reciter. Mixing (say) 192k recitation with
+// 128k silence still decodes, but makes the stream VBR with no VBR header — so
+// the browser, which derives time from bytes/bitrate, reports a wrong duration
+// and SEEKS TO THE WRONG PLACE. Measured: 0.66s drift in 29s, and it compounds.
+const SIL_B64 = {
+128:'//uSZECP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==',
+192:'//uyZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV'
+};
+const SIL_MS = 1152/44100*1000;
+let SIL = {};
+
+const pad3 = n => String(n).padStart(3,'0');
+const audioURL = (q,s,a) => `${AUD}/${q}/${pad3(s)}${pad3(a)}.mp3`;
+const $ = id => document.getElementById(id);
+const bps = () => (RECITERS.find(r=>r.id===S.qari)||{bps:128}).bps;
+const mmss = s => { s=Math.max(0,Math.round(s)); const m=Math.floor(s/60), sec=String(s%60).padStart(2,'0');
+  return m>=60 ? `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}:${sec}` : `${m}:${sec}`; };
+const sName = n => { const s = SURAHS.find(x=>x.n===n); return s ? s.en : 'Surah '+n; };
+const sNum  = n => String(n).padStart(3,'0');
+const ascii = s => s.replace(/[^\x20-\x7E]/g,'').replace(/[\/\\:*?"<>|]/g,'-').replace(/\s+/g,' ').trim();
+
+const DEF = {qari:'Alafasy_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
+             wake:false, asz:34, uisz:19, rep:3, rng:5, sd:20, surah:1, from:1, to:7,
+             sgap:1, sgapmode:'none', lyrics:true};
+const LS = {
+  get(k,d){ try{ const v=localStorage.getItem('hifz.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem('hifz.'+k, JSON.stringify(v)); }catch(e){} }
+};
+let S       = Object.assign({}, DEF, LS.get('s',{}));
+let LISTS   = LS.get('lists',[]);
+let RECIPES = LS.get('recipes',[]);
+let BLOCKS  = LS.get('blocks',[]);
+const saveS = () => LS.set('s',S);
+const saveL = () => LS.set('lists',LISTS);
+const saveR = () => LS.set('recipes',RECIPES);
+const saveB = () => LS.set('blocks',BLOCKS);
+let VERSES = LS.get('verses',[]);   // saved verses for practice: [{s,a,text}]
+const saveV = () => LS.set('verses',VERSES);
+let BOOKMARKS = LS.get('bookmarks',[]);  // manual bookmarks: [{s,a,text,label}] max 10
+const saveBK = () => LS.set('bookmarks',BOOKMARKS);
+let LASTREAD = LS.get('lastread',null);  // {s,a} auto last-read position
+const saveLR = () => LS.set('lastread',LASTREAD);
+// Saved-item timestamps: every new bookmark/verse/range/recipe gets ts:Date.now().
+// Older items saved before this existed simply have no ts — we don't fake one,
+// they just sort to the bottom and show no timestamp line.
+const fmtTS = ts => { if(!ts) return '';
+  const d=new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); };
+const byNewest = (a,b) => (b.ts||0)-(a.ts||0);
+if(!LS.get('bump4',false)){
+  if(!(S.asz > 25)) S.asz = DEF.asz;              // only if never raised by hand
+  if(typeof S.uisz !== 'number') S.uisz = DEF.uisz;
+  saveS(); LS.set('bump4',true);
+}
+// v6: fold the old echo flag + zero-gap into the new radio modes, once.
+if(!LS.get('gapmig6',false)){
+  if(typeof S.gapmode !== 'string') S.gapmode = S.echo ? 'echo' : (S.gap>0 ? 'fixed' : 'none');
+  if(typeof S.sgapmode !== 'string') S.sgapmode = (S.sgap>0 ? 'fixed' : 'none');
+  if(!(S.gap>0))  S.gap  = DEF.gap;    // keep a sane slider value even in no-gap mode
+  if(!(S.sgap>0)) S.sgap = DEF.sgap;
+  delete S.echo;
+  saveS(); LS.set('gapmig6',true);
+}
+// v12: native reskin bumps the default interface size. Raise old installs once,
+// but only if the user never nudged it above the previous default of 17.
+if(!LS.get('bump12',false)){
+  if(!(S.uisz > 17)) S.uisz = DEF.uisz;
+  saveS(); LS.set('bump12',true);
+}
+// v23: switch default reciter to Alafasy for new installs and those still on Husary default.
+if(!LS.get('bump23',false)){
+  if(S.qari==='Husary_128kbps') S.qari = DEF.qari;
+  saveS(); LS.set('bump23',true);
+}
+
+let SURAHS = [], TEXT = {}, BISM = '';
+let SEG = [], PARTS = [], TOTAL = 0, pi = 0, segI = -1;
+let VIEW = [], MODE = 'drill', LABEL = 'Hifz';
+let wake = null, preparing = false;
+let DL = {cache:0, net:0};   // per-build tally of saved vs downloaded audio
+
+let tt; function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on');
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2800); }
+
+// Error carrying a short code, shown in the activity log for troubleshooting.
+const E = (code,msg) => { const e=new Error(msg); e.code=code; return e; };
+
+/* ---------------------------------------------------------- activity log */
+let logRows = [], logProgRow = null;
+function clearLog(){ const l=$('log'); if(!l) return;
+  l.innerHTML=''; logRows=[]; logProgRow=null; $('logwrap').hidden=false; }
+function stamp(){ const d=new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
+function logLine(msg, kind){          // kind: 'in' | 'ok' | 'er'
+  const l=$('log'); if(!l) return null;
+  kind = kind||'in';
+  const mark = kind==='ok'?'✓':kind==='er'?'✗':'›';
+  const row=document.createElement('div');
+  row.className='li'+(kind==='er'?' err-line':'');
+  row.innerHTML='<i></i><span class="msg"></span>';
+  row.querySelector('i').textContent=mark; row.querySelector('i').className=kind;
+  row.querySelector('.msg').textContent=msg;
+  l.appendChild(row); l.scrollTop=l.scrollHeight;
+  logRows.push(`[${stamp()}] ${mark} ${msg}`);
+  return row;
+}
+// A single line that updates in place (for "Downloading N of M…").
+function logProg(msg){
+  const l=$('log'); if(!l) return;
+  if(!logProgRow){ logProgRow=document.createElement('div'); logProgRow.className='li';
+    logProgRow.innerHTML='<i class="in">›</i><span class="msg"></span>'; l.appendChild(logProgRow); }
+  logProgRow.querySelector('.msg').textContent=msg; l.scrollTop=l.scrollHeight;
+}
+function logProgDone(msg){
+  if(logProgRow){ logProgRow.querySelector('i').textContent='✓'; logProgRow.querySelector('i').className='ok';
+    logProgRow.querySelector('.msg').textContent=msg;
+    logRows.push(`[${stamp()}] ✓ ${msg}`); logProgRow=null; }
+  else logLine(msg,'ok');
+}
+function logError(e){
+  const code = (e && e.code) || 'ERR';
+  const msg  = (e && e.message) || 'Unknown error';
+  logLine(`[${code}] ${msg}`, 'er');
+}
+// Clipboard API is blocked outside secure contexts (e.g. content:// / file://),
+// so fall back to a hidden textarea + execCommand.
+function fallbackCopy(text, done){
+  try{
+    const ta=document.createElement('textarea'); ta.value=text;
+    ta.style.cssText='position:fixed;left:-9999px;top:0'; document.body.appendChild(ta);
+    ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); done && done();
+  }catch(e){ toast('Copy not supported — screenshot instead'); }
+}
+function copyText(text, okMsg){
+  const done = ()=>toast(okMsg||'Copied');
+  if(navigator.clipboard && navigator.clipboard.writeText)
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
+  else fallbackCopy(text, done);
+}
+// All verses currently shown, Arabic + verse numbers, unique ayat in order.
+function copyAllVerses(){
+  if(!VIEW.length) return toast('Nothing to copy yet');
+  const seen=new Set(), lines=[]; let last=null;
+  VIEW.forEach(v=>{
+    const key=v.s+':'+v.a; if(seen.has(key)) return; seen.add(key);
+    if(v.s!==last){ lines.push(`— ${sName(v.s)} —`); last=v.s; }
+    lines.push(segLyric({s:v.s,a:v.a}));
+  });
+  copyText(lines.join('\n'), `Copied ${seen.size} verse${seen.size>1?'s':''}`);
+}
+
+/* --------------------------------------------------------------- storage */
+const DB = (()=>{
+  let p, dead = false;
+  const open = () => p || (p = new Promise((res,rej)=>{
+    let r; try{ r = indexedDB.open('hifz',2); }catch(e){ dead=true; return rej(e); }
+    r.onupgradeneeded = e => { const d=e.target.result;
+      if(!d.objectStoreNames.contains('audio')) d.createObjectStore('audio');
+      if(!d.objectStoreNames.contains('text'))  d.createObjectStore('text'); };
+    r.onsuccess = e => res(e.target.result);
+    r.onerror   = () => { dead=true; rej(r.error); };
+    r.onblocked = () => { dead=true; rej(new Error('blocked')); };
+  }));
+  const tx = async (store,mode,fn) => {
+    if(dead) throw new Error('storage unavailable');
+    const d = await open();
+    return new Promise((res,rej)=>{
+      const t = d.transaction(store,mode), q = fn(t.objectStore(store));
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    });
+  };
+  return {
+    get:  (s,k)   => tx(s,'readonly', o=>o.get(k)),
+    put:  (s,k,v) => tx(s,'readwrite',o=>o.put(v,k)),
+    keys: (s)     => tx(s,'readonly', o=>o.getAllKeys()),
+    clear:(s)     => tx(s,'readwrite',o=>o.clear()),
+    probe: async ()=>{ await tx('text','readwrite',o=>o.put(1,'__probe')); return true; }
+  };
+})();
+
+/* ----------------------------------------------------------- mp3 plumbing */
+const b64ToU8 = b => { const s=atob(b), u=new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
+
+const BR_V1L3 = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0];
+const BR_V2L3 = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0];
+const SR_TBL  = {3:[44100,48000,32000], 2:[22050,24000,16000], 0:[11025,12000,8000]};
+// A LAME "Xing"/"Info" header is a whole frame of encoder metadata (encode
+// delay, padding, a seek TOC) sitting at the start of a file — not real
+// audio. A player skips it because it's frame #0 of a whole file; stitched
+// ayah-by-ayah it lands mid-stream every time, so nothing skips it: it plays
+// as a spurious ~26ms frame AND gets counted by mp3Dur() below, quietly
+// pushing every duration this app computes out of step with the real audio.
+// Alafasy's files all carry one (the app's default reciter); the others
+// don't. Detected by the literal tag a fixed offset past the frame header,
+// same as any MP3 parser — return the frame's length so it can be dropped.
+function xingFrameLen(u8, a, b){
+  const h1=u8[a+1], h2=u8[a+2];
+  if(((h1>>1)&3) !== 1) return 0;                       // must be Layer III
+  const ver=(h1>>3)&3, brI=(h2>>4)&15, srI=(h2>>2)&3, pad=(h2>>1)&1;
+  const srT = SR_TBL[ver];
+  if(!srT || brI===0 || brI===15 || srI===3) return 0;
+  const sr = srT[srI], br = (ver===3?BR_V1L3:BR_V2L3)[brI]*1000;
+  const len = Math.floor((ver===3?144:72)*br/sr) + pad;
+  if(len < 40 || a+len > b) return 0;
+  for(let o=a+4; o<a+40 && o+4<=a+len; o++){
+    const isXing = u8[o]===0x58&&u8[o+1]===0x69&&u8[o+2]===0x6E&&u8[o+3]===0x67;
+    const isInfo = u8[o]===0x49&&u8[o+1]===0x6E&&u8[o+2]===0x66&&u8[o+3]===0x6F;
+    if(isXing || isInfo) return len;
+  }
+  return 0;
+}
+// An ID3 tag landing mid-stream makes decoders choke ("Header missing").
+// Husary's files carry one; the others don't. A Xing/Info header frame, if
+// present, is stripped too — see xingFrameLen above.
+function stripTags(u8){
+  let a = 0, b = u8.length;
+  if(u8[0]===0x49 && u8[1]===0x44 && u8[2]===0x33)
+    a = 10 + ((u8[6]&0x7f)<<21 | (u8[7]&0x7f)<<14 | (u8[8]&0x7f)<<7 | (u8[9]&0x7f));
+  if(b-a > 128 && u8[b-128]===0x54 && u8[b-127]===0x41 && u8[b-126]===0x47) b -= 128;
+  while(a < b-1 && !(u8[a]===0xFF && (u8[a+1]&0xE0)===0xE0)) a++;
+  const xl = xingFrameLen(u8, a, b);
+  if(xl) a += xl;
+  return u8.subarray(a,b);
+}
+
+// Exact duration by counting frames — matches the stitched stream precisely.
+// Reading it off an <audio> element is an estimate and would drift.
+function mp3Dur(u8){
+  let i = 0, secs = 0, n = 0;
+  while(i < u8.length-4){
+    if(!(u8[i]===0xFF && (u8[i+1]&0xE0)===0xE0)){ i++; continue; }
+    const ver=(u8[i+1]>>3)&3, lay=(u8[i+1]>>1)&3;
+    const brI=(u8[i+2]>>4)&15, srI=(u8[i+2]>>2)&3, pad=(u8[i+2]>>1)&1;
+    const srT = SR_TBL[ver];
+    if(lay!==1 || !srT || brI===0 || brI===15 || srI===3){ i++; continue; }
+    const sr = srT[srI], br = (ver===3?BR_V1L3:BR_V2L3)[brI]*1000;
+    const len = Math.floor((ver===3?144:72)*br/sr) + pad;
+    if(len < 4){ i++; continue; }
+    secs += (ver===3?1152:576)/sr; n++; i += len;
+  }
+  return n ? secs : 0;
+}
+// ID3v2.3 tag: title/artist/album (ASCII) plus, optionally, embedded lyrics.
+// Lyrics are Arabic, so they go in a USLT frame encoded as UTF-16. The tag sits
+// at the FRONT and is skipped by decoders, so it never disturbs playback.
+function id3(title, artist, album, lrc){
+  const encA = s => [...ascii(s)].map(c=>c.charCodeAt(0));
+  const textFrame = (id,text) => { const d=[0,...encA(text),0], z=d.length;
+    return [...encA(id),(z>>>24)&255,(z>>>16)&255,(z>>>8)&255,z&255,0,0,...d]; };
+  let body = [...textFrame('TIT2',title), ...textFrame('TPE1',artist), ...textFrame('TALB',album)];
+  if(lrc){
+    const bom=[0xFF,0xFE];
+    const u16 = str => { const o=[];
+      for(const ch of str){ let c=ch.codePointAt(0);
+        if(c>0xFFFF){ c-=0x10000; const hi=0xD800+(c>>10), lo=0xDC00+(c&0x3FF);
+          o.push(hi&255,hi>>8,lo&255,lo>>8); }
+        else o.push(c&255,c>>8); }
+      return o; };
+    // USLT = [enc=1][lang 'ara'][descriptor: BOM + terminator][lyrics: BOM + text]
+    const content = [0x01, 0x61,0x72,0x61, ...bom,0x00,0x00, ...bom, ...u16(lrc)];
+    const z = content.length;
+    body = body.concat([0x55,0x53,0x4C,0x54, (z>>>24)&255,(z>>>16)&255,(z>>>8)&255,z&255, 0,0, ...content]);
+  }
+  const n = body.length;
+  return new Uint8Array([0x49,0x44,0x33,3,0,0,(n>>21)&0x7f,(n>>14)&0x7f,(n>>7)&0x7f,n&0x7f,...body]);
+}
+// Verse text for one segment: ﴿١١﴾ + the ayah (or the Bismillah line).
+const arabicNum = n => String(n).replace(/[0-9]/g, d=>'٠١٢٣٤٥٦٧٨٩'[+d]);
+function segLyric(seg){
+  if(seg.bism) return BISM;
+  const t = (TEXT[seg.s]||[])[seg.a-1];
+  return `﴿${arabicNum(seg.a)}﴾ ${t ? t.text : ''}`;
+}
+// LRC for one part: [mm:ss.xx] per segment, timed to that part's local clock.
+function buildLRC(part, title){
+  const reciter = (RECITERS.find(r=>r.id===S.qari)||{}).name||'';
+  const out = [`[ti:${title}]`, `[ar:${reciter}]`, '[re:Hifz]'];
+  for(const s of SEG){
+    if(s.p !== part) continue;
+    const t = Math.max(0, s.l0);
+    const m = Math.floor(t/60), sec = (t%60).toFixed(2).padStart(5,'0');
+    out.push(`[${String(m).padStart(2,'0')}:${sec}]${segLyric(s)}`);
+  }
+  return out.join('\n');
+}
+// HH:MM:SS,mmm — SRT's timestamp format. Built from integer milliseconds
+// throughout so a rounded 1000ms never lands as an invalid ",1000" instead of
+// carrying into the next second.
+function srtTime(t){
+  let ms = Math.max(0, Math.round(t*1000));
+  const h = Math.floor(ms/3600000); ms -= h*3600000;
+  const m = Math.floor(ms/60000);   ms -= m*60000;
+  const s = Math.floor(ms/1000);    ms -= s*1000;
+  const pad=(n,w=2)=>String(n).padStart(w,'0');
+  return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms,3)}`;
+}
+// SRT for one part — same segments and same text (segLyric) as the .lrc
+// above, just as numbered start/end cues instead of single timestamps. Pairs
+// with the MP3 the same way: identical base name, same folder. VLC needs a
+// Visualization turned on (Audio ▸ Visualizations) before it'll render
+// subtitles over audio-only playback — the file alone isn't enough there.
+function buildSRT(part){
+  const out = []; let n = 1;
+  for(const s of SEG){
+    if(s.p !== part) continue;
+    const start = Math.max(0, s.l0), end = start + (s.g1 - s.g0);
+    out.push(`${n++}\n${srtTime(start)} --> ${srtTime(end)}\n${segLyric(s)}\n`);
+  }
+  return out.join('\n');
+}
+
+/* --------------------------------------------------------------- fetching */
+// fetch with a hard timeout, so one stalled request can't hang "Preparing"
+// forever. AbortController fires after ms, turning a silent hang into a clear
+// error the caller can report.
+async function fetchT(url, ms=20000){
+  const c = new AbortController();
+  const t = setTimeout(()=>c.abort(), ms);
+  try{ return await fetch(url, {signal:c.signal}); }
+  finally{ clearTimeout(t); }
+}
+async function loadSurahs(){
+  const c = LS.get('surahs',null);
+  // require .tr too, so caches from v4 (which lacked it) re-fetch for search
+  if(c && c.length===114 && c[0].tr){ SURAHS = c; buildSearchIndex(); return; }
+  let r; try{ r = await fetchT(`${API}/surah`); }
+  catch(e){ throw E('NET_LIST', 'Could not reach the surah list — no connection?'); }
+  if(!r.ok) throw E('NET_LIST_'+r.status, 'Surah list failed to load ('+r.status+')');
+  SURAHS = (await r.json()).data.map(s=>({n:s.number, ar:s.name, en:s.englishName,
+                                          tr:s.englishNameTranslation, count:s.numberOfAyahs}));
+  LS.set('surahs', SURAHS);
+  buildSearchIndex();
+}
+async function loadBismillah(){
+  BISM = LS.get('bism','');
+  if(BISM) return;
+  const r = await fetchT(`${API}/surah/1/quran-uthmani`);
+  BISM = (await r.json()).data.ayahs[0].text.replace(/^\uFEFF/,'').trim();
+  LS.set('bism', BISM);
+}
+// The edition glues Bismillah onto ayah 1 of every surah but 1 and 9, while the
+// audio does NOT recite it. Left in, text and voice drift apart on the first
+// ayah of every surah. Al-Fatiha's ayah 1 IS the Bismillah — canonical string.
+async function loadSurah(n){
+  if(TEXT[n]) return TEXT[n];
+  let c = null;
+  try{ c = await DB.get('text', n); }catch(e){}
+  if(!c){
+    let r; try{ r = await fetchT(`${API}/surah/${n}/quran-uthmani`); }
+    catch(e){ throw E('NET_TEXT', 'Text for surah '+n+' stalled — check your connection'); }
+    if(!r.ok) throw E('NET_TEXT_'+r.status, 'Text for surah '+n+' failed ('+r.status+')');
+    c = (await r.json()).data.ayahs.map(a=>({n:a.numberInSurah, text:a.text.replace(/^\uFEFF/,'')}));
+    if(n!==1 && n!==9 && c[0] && BISM && c[0].text.startsWith(BISM))
+      c[0].text = c[0].text.slice(BISM.length).trim();
+    try{ await DB.put('text', n, c); }catch(e){}
+  }
+  TEXT[n] = c; return c;
+}
+async function getBytes(s,a){
+  const k = `${S.qari}/${pad3(s)}${pad3(a)}`;
+  let blob = null;
+  try{ blob = await DB.get('audio',k); }catch(e){}
+  if(blob){ DL.cache++; }
+  else {
+    let r = null;
+    for(let attempt=0; attempt<2 && !(r && r.ok); attempt++){
+      try{ r = await fetchT(audioURL(S.qari,s,a), 20000); }
+      catch(e){ r = null; }   // timeout or network drop — retry once
+    }
+    if(!r) throw E('NET_TIMEOUT', `Audio ${s}:${a} stalled — check your connection and try again`);
+    if(!r.ok) throw E('NET_AUDIO_'+r.status, `Audio ${s}:${a} not found (${r.status})`);
+    blob = await r.blob();
+    DL.net++;
+    try{ await DB.put('audio',k,blob); }catch(e){}
+  }
+  return stripTags(new Uint8Array(await blob.arrayBuffer()));
+}
+
+/* ------------------------------------------------------------ drill queue */
+function buildQueue(from,to,reps,rounds,depth){
+  const q = [];
+  for(let i=from;i<=to;i++){
+    if(i>from){ const st=Math.max(from,i-depth); for(let j=st;j<i;j++) q.push({a:j,k:'stack'}); }
+    for(let r=0;r<reps;r++) q.push({a:i,k:'rep',r:r+1,of:reps});
+  }
+  for(let r=0;r<rounds;r++) for(let i=from;i<=to;i++) q.push({a:i,k:'round',r:r+1,of:rounds});
+  return q;
+}
+function countQueue(from,to,reps,rounds,depth){
+  const n = to-from+1; let st=0;
+  for(let i=1;i<n;i++) st += Math.min(i,depth);
+  return st + n*reps + n*rounds;
+}
+// Live estimate, no network: recitation time tracks letter count (r=0.94 over a
+// 54-ayah sample; secs ~= 0.39*letters + 1.9). The muqatta'at are the known
+// exception — recited letter by letter, so 3 letters can run 6 seconds.
+const MUQ = new Set([2,3,7,10,11,12,13,14,15,19,20,26,27,28,29,30,31,32,36,38,40,41,42,43,44,45,46,50,68]);
+function estAyah(text,surah,num){
+  const L = text.replace(/[\u064B-\u0652\u0670\u06D6-\u06ED\s]/g,'').length;
+  if(num===1 && MUQ.has(surah) && L<=10) return 2.0*L + 3;
+  return 0.39*L + 1.9;
+}
+const toMB = secs => secs*(bps()*1000/8)/1048576;
+// Drill gap after an ayah of duration d (seconds), by mode. Returns seconds.
+const drillGap = d => S.gapmode==='echo' ? d : (S.gapmode==='none' ? 0 : S.gap);
+// Stitch tracks always play continuously — no gap between ayat.
+const stitchGap = () => 0;
+
+/* ------------------------------------------------------------ THE STITCH */
+// items: [{s, a, meta}]      gapFn(dur, item, i) -> milliseconds
+async function stitch(items, gapFn, onProg){
+  const uniq = [...new Set(items.map(x=>x.s+':'+x.a))];
+  const bytes = new Map(), durs = new Map();
+  for(let i=0;i<uniq.length;i++){
+    const [s,a] = uniq[i].split(':').map(Number);
+    onProg && onProg(i, uniq.length);
+    const u8 = await getBytes(s,a);
+    bytes.set(uniq[i], u8); durs.set(uniq[i], mp3Dur(u8));
+    await new Promise(r=>setTimeout(r,0));      // let the UI paint
+  }
+  // Silence MUST match the reciter's bitrate — see the SIL_B64 note above.
+  const frame = SIL[bps()] || SIL[128];
+  const silFor = ms => { const n = Math.max(0, Math.round(ms/SIL_MS));
+    const u = new Uint8Array(frame.length*n);
+    for(let i=0;i<n;i++) u.set(frame, i*frame.length);
+    return {u8:u, dur:n*SIL_MS/1000}; };
+
+  const seg = [], parts = [];
+  let chunks = [], partBytes = 0, partStart = 0, t = 0;
+  const close = () => { if(!chunks.length) return;
+    parts.push({blob:new Blob(chunks,{type:'audio/mpeg'}), url:null, start:partStart, dur:t-partStart});
+    chunks=[]; partBytes=0; partStart=t; };
+
+  for(let i=0;i<items.length;i++){
+    const it = items[i], k = it.s+':'+it.a;
+    const u8 = bytes.get(k), d = durs.get(k);
+    if(partBytes && partBytes + u8.length > PART_MB*1048576) close();
+    seg.push({g0:t, g1:t+d, s:it.s, a:it.a, k:it.meta.k, r:it.meta.r, of:it.meta.of,
+              bism:!!it.meta.bism, p:parts.length});
+    chunks.push(u8); partBytes += u8.length; t += d;
+    if(i < items.length-1){
+      const g = silFor(gapFn(d, it, i));
+      if(g.u8.length){ chunks.push(g.u8); partBytes += g.u8.length; t += g.dur; }
+    }
+  }
+  close();
+  seg.forEach(x => x.l0 = x.g0 - parts[x.p].start);
+  return {parts, seg, total:t};
+}
+
+/* --------------------------------------------------------------- playback */
+let el = null;
+function ensureEl(){
+  if(el) return el;
+  el = new Audio(); el.preload='auto'; el.setAttribute('playsinline','');
+  el.addEventListener('timeupdate', tick);
+  el.addEventListener('ended', ()=>{
+    if(pi < PARTS.length-1){ loadPart(pi+1); el.play().catch(()=>{}); } else finish();
+  });
+  el.addEventListener('play',  ()=>{ $('play').textContent='Pause'; reqWake(); });
+  el.addEventListener('pause', ()=>{ if(!el.ended) $('play').textContent='Play'; relWake(); });
+  return el;
+}
+const partURL = i => PARTS[i].url || (PARTS[i].url = URL.createObjectURL(PARTS[i].blob));
+function loadPart(i){ pi=i; ensureEl().src = partURL(i); }
+const gTime = () => PARTS[pi] ? PARTS[pi].start + (el?el.currentTime:0) : 0;
+function seekTo(g){
+  if(!PARTS.length) return;
+  g = Math.max(0, Math.min(g, TOTAL-0.05));
+  let p = PARTS.findIndex(x => g >= x.start && g < x.start+x.dur);
+  if(p < 0) p = PARTS.length-1;
+  const was = el && !el.paused;
+  if(p !== pi) loadPart(p);
+  const set = ()=>{ try{ el.currentTime = g - PARTS[pi].start; }catch(e){} };
+  if(el.readyState >= 1) set(); else el.addEventListener('loadedmetadata', set, {once:true});
+  if(was) el.play().catch(()=>{});
+  tick();
+}
+function findSeg(g){
+  let lo=0, hi=SEG.length-1;
+  while(lo<=hi){ const m=(lo+hi)>>1;
+    if(g < SEG[m].g0) hi=m-1; else if(g >= SEG[m].g1) lo=m+1; else return m; }
+  for(let i=SEG.length-1;i>=0;i--) if(SEG[i].g1 <= g) return i;   // inside a gap
+  return -1;
+}
+function tick(){
+  if(!SEG.length) return;
+  const g = gTime();
+  $('progfill').style.width = (TOTAL ? g/TOTAL*100 : 0)+'%';
+  const i = findSeg(g);
+  if(i < 0) return;
+  if(i !== segI){ segI = i; paint(SEG[i]); }
+  status(SEG[i], g);
+}
+function jump(dir){
+  if(!SEG.length) return;
+  let i = Math.max(0, findSeg(gTime()));
+  const key = SEG[i].s+':'+SEG[i].a;
+  if(dir < 0){
+    if(gTime() - SEG[i].g0 > 1.2) return seekTo(SEG[i].g0);   // restart this ayah first
+    while(i>0 && SEG[i].s+':'+SEG[i].a === key) i--;
+    const k2 = SEG[i].s+':'+SEG[i].a;
+    while(i>0 && SEG[i-1].s+':'+SEG[i-1].a === k2) i--;
+  } else {
+    while(i < SEG.length-1 && SEG[i].s+':'+SEG[i].a === key) i++;
+  }
+  seekTo(SEG[i].g0);
+}
+function stop(){
+  if(el) el.pause();
+  if(PARTS.length){ loadPart(0); try{ el.currentTime=0; }catch(e){} }
+  segI=-1; paint(null);
+  $('progfill').style.width='0';
+  $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
+  $('play').textContent='Play';
+  if(pendingReload) hardRefresh();
+}
+// New session: stop, clear the built track, return to setup. Saved ranges,
+// recipes, settings and downloaded audio are all left untouched.
+function newSession(){
+  if(el){ try{ el.pause(); }catch(e){} }
+  PARTS=[]; SEG=[]; TOTAL=0; segI=-1; pi=0; MODE='drill';
+  paint(null);
+  $('bar').hidden=true; $('exprow').hidden=true; $('copyall').hidden=true; $('logwrap').hidden=true;
+  $('progfill').style.width='0'; $('play').textContent='Play';
+  tab('sel');
+  toast('New session — choose a range');
+}
+function finish(){
+  relWake(); $('play').textContent='Play';
+  $('phase').textContent='Complete'; $('phase').className='p-rep'; $('pos').textContent='';
+  $('progfill').style.width='100%'; segI=-1; paint(null);
+  toast(MODE==='drill' ? 'Range complete. May Allah make it firm.' : 'Track complete.');
+  if(pendingReload) setTimeout(hardRefresh, 900);
+}
+async function reqWake(){
+  if(!S.wake || !('wakeLock' in navigator) || wake) return;
+  try{ wake = await navigator.wakeLock.request('screen');
+       wake.addEventListener('release', ()=>{ wake=null; }); }catch(e){}
+}
+function relWake(){ try{ wake && wake.release(); }catch(e){} wake=null; }
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && el && !el.paused) reqWake(); });
+
+/* -------------------------------------------------------------- rendering */
+const PHASE = {stack:'Stack', rep:'Repeat', round:'Full range', listen:'Playing'};
+function status(s,g){
+  $('phase').textContent = PHASE[s.k] || 'Playing';
+  $('phase').className = 'p-'+(s.k||'listen');
+  let d;
+  if(s.bism)             d = 'Bismillah';
+  else if(s.k==='stack') d = `Recalling ayah ${s.a}`;
+  else if(s.k==='rep')   d = `Ayah ${s.a} · rep ${s.r}/${s.of}`;
+  else if(s.k==='round') d = `Ayah ${s.a} · round ${s.r}/${s.of}`;
+  else                   d = `${sName(s.s)} ${s.a}`;
+  $('pos').textContent = `${d} · ${mmss(g)}/${mmss(TOTAL)}`;
+}
+function paint(s){
+  document.querySelectorAll('#text .ayah').forEach(r=>{
+    r.classList.remove('cur','stk','veiled');
+    if(!s) return;
+    const same = !s.bism && (+r.dataset.s===s.s && +r.dataset.a===s.a);
+    if(S.hl && same) r.classList.add(s.k==='stack' ? 'stk' : 'cur');
+    if(S.veil && MODE==='drill' && s.k!=='round' && +r.dataset.s===s.s){
+      const edge = SEG.slice(0,segI+1).reduce((m,x)=> x.k==='rep' ? Math.max(m,x.a) : m, s.a);
+      if(+r.dataset.a > edge) r.classList.add('veiled');
+    }
+  });
+  const on = document.querySelector('#text .ayah.cur, #text .ayah.stk');
+  if(on) on.scrollIntoView({block:'center', behavior:'smooth'});
+}
+// VIEW: the ordered list of ayat on screen, [{s,a}].
+function renderView(){
+  const box = $('text'); box.innerHTML='';
+  const multi = new Set(VIEW.map(v=>v.s)).size > 1;
+  let last = null;
+  VIEW.forEach(v=>{
+    const newSurah = v.s !== last;
+    if(newSurah || v.brk){
+      if(newSurah && multi){
+        const h = document.createElement('div'); h.className='shead';
+        h.textContent = `${v.s}. ${sName(v.s)}`; box.appendChild(h);
+      }
+      // Stitch sets v.brk as a deliberate block-boundary marker, shown
+      // regardless of surah (including 9). Outside Stitch (drill — v.brk
+      // unset), Bismillah plays only entering a genuine new surah, skipping
+      // 9 (no canonical Bismillah) and Al-Fātiḥah 1:1 (already IS one).
+      if(v.brk || (newSurah && v.s!==9 && !(v.s===1 && v.a===1))){
+        const b = document.createElement('div'); b.className='bismline';
+        b.textContent = BISM; box.appendChild(b);
+      }
+      last = v.s;
+    }
+    const t = (TEXT[v.s]||[])[v.a-1];
+    const d = document.createElement('div');
+    d.className='ayah'; d.dataset.s=v.s; d.dataset.a=v.a;
+    d.innerHTML = `<span class="t"></span><span class="num">${v.a}</span><button class="cpy">Copy</button>`;
+    d.querySelector('.t').textContent = t ? t.text : '…';
+    d.querySelector('.cpy').onclick = (e)=>{ e.stopPropagation();
+      copyText(`${segLyric({s:v.s,a:v.a})}`, 'Ayah copied'); };
+    box.appendChild(d);
+  });
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+}
+function media(){
+  if(!('mediaSession' in navigator)) return;
+  try{ if(typeof MediaMetadata==='function')
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: LABEL, artist:(RECITERS.find(r=>r.id===S.qari)||{}).name||'', album:'Hifz'});
+  }catch(e){}
+  try{
+    navigator.mediaSession.setActionHandler('play',  ()=> el && el.play());
+    navigator.mediaSession.setActionHandler('pause', ()=> el && el.pause());
+    navigator.mediaSession.setActionHandler('previoustrack', ()=>jump(-1));
+    navigator.mediaSession.setActionHandler('nexttrack', ()=>jump(1));
+  }catch(e){}
+}
+function prog(i,n){
+  $('pos').textContent = `Downloading ${i+1} of ${n}`;
+  $('prepfill').style.width = ((i/n)*80)+'%';
+  logProg(`Preparing audio ${i+1} of ${n}…`);
+}
+function prepStart(){ stopAyahPlayer(); preparing=true; $('bar').hidden=false; $('prepbar').hidden=false;
+  $('exprow').hidden=true; $('phase').textContent='Preparing'; $('phase').className='p-prep'; }
+function prepEnd(){ preparing=false; $('prepfill').style.width='100%';
+  setTimeout(()=>{ $('prepbar').hidden=true; $('prepfill').style.width='0'; },350); }
+function showExport(){
+  $('exprow').hidden = false;
+  const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+  $('exphint').textContent = `${mmss(TOTAL)} · ${mb.toFixed(1)} MB${PARTS.length>1?` · saves as a zip of ${PARTS.length} files`:''}`;
+}
+
+/* ------------------------------------------------------------ file saving */
+function saveBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+// Minimal STORE-only ZIP (no compression — MP3 is already compressed). Lets a
+// split session download as ONE file instead of several the browser may block.
+const CRC_T = (()=>{ const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; }
+  return t; })();
+function crc32(u8){ let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++) c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0; }
+function makeZip(files){   // files: [{name, u8}] -> Blob
+  const u16=n=>[n&255,(n>>8)&255], u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  const enc=new TextEncoder(), chunks=[], central=[]; let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name), crc=crc32(f.u8), sz=f.u8.length;
+    const lfh=[...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0x21),
+      ...u32(crc),...u32(sz),...u32(sz),...u16(name.length),...u16(0)];
+    chunks.push(new Uint8Array(lfh), name, f.u8);
+    central.push([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0x21),
+      ...u32(crc),...u32(sz),...u32(sz),...u16(name.length),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(0),...u32(off),...name]);
+    off += lfh.length + name.length + sz;
+  }
+  const cdStart=off; let cd=[];
+  for(const c of central){ cd=cd.concat(c); off+=c.length; }
+  const eocd=[...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),
+    ...u32(off-cdStart),...u32(cdStart),...u16(0)];
+  chunks.push(new Uint8Array(cd), new Uint8Array(eocd));
+  return new Blob(chunks,{type:'application/zip'});
+}
+async function exportAudio(withLyrics){
+  if(!PARTS.length) return toast('Nothing built yet');
+  const artist = (RECITERS.find(r=>r.id===S.qari)||{}).name||'';
+  const base = ascii(LABEL) || 'Hifz track';
+  const withLrc = (withLyrics===undefined ? S.lyrics : withLyrics) && SEG.length;
+  const btns=[$('explisten'),$('expmusi')];
+  btns.forEach(b=>{ if(b) b.disabled=true; });
+  const busy = withLrc ? $('expmusi') : $('explisten');
+  const busyLabel = busy ? busy.textContent : '';
+  if(busy) busy.textContent='Saving…';
+  try{
+    const files=[];
+    for(let i=0;i<PARTS.length;i++){
+      const title = ascii(PARTS.length>1 ? `${base} part ${i+1} of ${PARTS.length}` : base);
+      const lrc = withLrc ? buildLRC(i, title) : null;
+      const srt = withLrc ? buildSRT(i) : null;
+      const tag = id3(title, artist, 'Hifz', lrc);   // lyrics ride inside the MP3
+      const body = new Uint8Array(await PARTS[i].blob.arrayBuffer());
+      const u8 = new Uint8Array(tag.length + body.length);
+      u8.set(tag,0); u8.set(body,tag.length);
+      files.push({name:`${title}.mp3`, u8});
+      // matching .lrc and .srt beside it — same base name, which is how
+      // folder players (and VLC, for the .srt) pair them up
+      if(lrc) files.push({name:`${title}.lrc`, u8:new TextEncoder().encode(lrc)});
+      if(srt) files.push({name:`${title}.srt`, u8:new TextEncoder().encode(srt)});
+      await new Promise(r=>setTimeout(r,0));   // let the UI breathe
+    }
+    // A lone MP3 (no lyrics) downloads directly and plays on a tap. Anything
+    // with a paired .lrc, or split into parts, goes in one zip — so the files
+    // stay together and the browser isn't asked to fire several downloads.
+    if(files.length === 1){
+      saveBlob(new Blob([files[0].u8],{type:'audio/mpeg'}), files[0].name);
+      logLine(`Saved ${files[0].name}`, 'ok');
+      toast('✓ Saved to your Downloads folder');
+    } else {
+      saveBlob(makeZip(files), `${base}.zip`);
+      const mp3s = files.filter(f=>f.name.endsWith('.mp3')).length;
+      logLine(`Saved ${base}.zip — ${mp3s} track${mp3s>1?'s':''}${withLrc?' + lyrics':''}`, 'ok');
+      toast(withLrc ? '✓ Saved zip in Downloads — extract it, then open the folder in Musicolet'
+                    : `✓ Saved zip of ${mp3s} files in Downloads`);
+    }
+  }catch(e){
+    e.code = e.code || 'ZIP';
+    logError(e);
+    toast('Could not build the file — try again');
+  }
+  btns.forEach(b=>{ if(b) b.disabled=false; });
+  if(busy) busy.textContent=busyLabel;
+}
+
+/* ------------------------------------------------------- drill setup tab */
+const depthVal = () => Math.max(1, +$('sd').value || 1);
+
+// --- surah search ---------------------------------------------------------
+// People type names without harakat and without the "سورة" prefix, and spell
+// the transliteration loosely (rahman / ar-rahmaan). Normalise hard on both
+// sides: strip marks, fold alef/ya/ta-marbuta variants, drop the al-/ar-
+// article, then squeeze doubled letters. Numbers match the surah number.
+// Normalise one word: drop article, fold loose long vowels, squeeze doubles.
+const normWord = w => { let x=w.toLowerCase().replace(/[^a-z0-9]/g,'');
+  x=x.replace(/^a[lr]/,'');
+  x=x.replace(/oo/g,'u').replace(/ee/g,'i').replace(/ou/g,'u');
+  return x.replace(/(.)\1+/g,'$1'); };
+// A whole query normalises as a single token (users type one word).
+const squeezeEn = s => normWord(s);
+// A stored name may be several words ("The Elephant"); normalise each word on
+// its own, THEN join — folding across the join would eat letters ("theelephant"
+// -> "thilephant"), losing "elephant".
+const indexEn = s => s.split(/[\s-]+/).map(normWord).join(' ');
+const normAr = s => s
+  .replace(/[\u064B-\u065F\u0670\u0640\u06D6-\u06ED]/g,'')          // harakat, tatweel, small marks
+  .replace(/[\u0622\u0623\u0625\u0671]/g,'\u0627')                  // alef variants -> bare alef
+  .replace(/\u0629/g,'\u0647').replace(/\u0649/g,'\u064A')          // ta marbuta -> ha, maksura -> ya
+  .replace(/\u0624/g,'\u0648').replace(/\u0626/g,'\u064A')          // hamza seats
+  .replace(/^\s*سور[ةه]\s*/,'').replace(/^ال/,'')                   // drop "surah" prefix + article
+  .replace(/\s+/g,'').trim();
+let SIDX = [];
+function buildSearchIndex(){
+  SIDX = SURAHS.map(s=>({n:s.n, ar:normAr(s.ar), en:indexEn(s.en)+' '+indexEn(s.tr||'')}));
+}
+function searchSurah(q){
+  q=(q||'').trim(); if(!q) return SURAHS.map(s=>s.n);
+  if(/^\d+$/.test(q)){ const n=+q; return SURAHS.filter(s=>String(s.n).startsWith(q)||s.n===n).map(s=>s.n); }
+  const hasLatin=/[a-z]/i.test(q);
+  if(hasLatin){ const n=squeezeEn(q);
+    // match within any single word, or across the whole name with spaces removed
+    return SIDX.filter(x=> x.en.includes(n) || x.en.replace(/ /g,'').includes(n)).map(x=>x.n); }
+  const n=normAr(q); return SIDX.filter(x=>x.ar.includes(n)).map(x=>x.n);
+}
+// Strip ALL Arabic diacritics/combining marks from names shown in native pickers.
+// System fonts in <select> dropdowns often can't render combining marks like sukun (ْ)
+// on certain letter combinations (e.g. عِمْرَان shows tofu). Letters are kept intact.
+const displayAr = s => (s||'').replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g,'');
+function fillSurahSelect(sel){
+  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
+}
+// Narrow the dropdown to matches; auto-select when exactly one remains.
+async function applyFilter(){
+  const q = $('sfilter').value;
+  const hits = searchSurah(q);
+  const set = new Set(hits);
+  const keep = SURAHS.filter(s=>set.has(s.n));
+  $('surah').innerHTML = (keep.length?keep:SURAHS)
+    .map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
+  const h=$('sfhint');
+  if(!q.trim()){ h.hidden=true; }
+  else { h.hidden=false;
+    h.textContent = hits.length===0 ? 'No match — showing all' :
+                    hits.length===1 ? '1 match' : `${hits.length} matches`; }
+  if(hits.length>=1){
+    $('surah').value = hits[0];
+    const s=SURAHS.find(x=>x.n===hits[0]);
+    fillAyat($('surah'),$('from'),$('to'),1,Math.min(7,s.count));
+    sync(); try{ await loadSurah(hits[0]); }catch(e){} budget();
+  }
+}
+// Same idea as applyFilter above, for Stitch's own surah picker.
+async function applySSFilter(){
+  const q = $('ssfilter').value;
+  const hits = searchSurah(q);
+  const set = new Set(hits);
+  const keep = SURAHS.filter(s=>set.has(s.n));
+  $('ssurah').innerHTML = (keep.length?keep:SURAHS)
+    .map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
+  const h=$('ssfhint');
+  if(!q.trim()){ h.hidden=true; }
+  else { h.hidden=false;
+    h.textContent = hits.length===0 ? 'No match — showing all' :
+                    hits.length===1 ? '1 match' : `${hits.length} matches`; }
+  if(hits.length>=1){
+    $('ssurah').value = hits[0];
+    const s=SURAHS.find(x=>x.n===hits[0]);
+    fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,s.count));
+    try{ await loadSurah(hits[0]); }catch(e){} sreadout();
+  }
+}
+function updateRangeHint(s, hintId){
+  const h=$(hintId); if(h && s) h.textContent = `${s.en} has ${s.count} ayat — type any number.`;
+}
+function fillAyat(surahSel, fromSel, toSel, f, t){
+  const s = SURAHS.find(x=>x.n===+surahSel.value); if(!s) return;
+  const setOne = (el,val)=>{
+    val = Math.min(Math.max(1, val||1), s.count);
+    if(el.tagName==='SELECT'){
+      el.innerHTML = Array.from({length:s.count},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+    } else { el.min=1; el.max=s.count; }   // number-box path (drill from/to)
+    el.value = val;
+  };
+  setOne(fromSel, f); setOne(toSel, t);
+  if(fromSel.id==='from') updateRangeHint(s,'rangehint');
+  else if(fromSel.id==='sfrom') updateRangeHint(s,'ssrangehint');
+}
+function sync(){
+  const s = SURAHS.find(x=>x.n===+$('surah').value);
+  const max = s ? s.count : 286;
+  let f=Math.min(Math.max(1, Math.round(+$('from').value||1)), max);
+  let t=Math.min(Math.max(1, Math.round(+$('to').value||1)), max);
+  if(t<f){ t=f; }
+  $('from').value=f; $('to').value=t;     // reflect any clamping back into the boxes
+  const n = t-f+1;
+  $('sd').max = Math.max(1,n-1);          // clamps the input first…
+  const depth = depthVal();               // …so this reads the clamped value
+  $('sdlbl').textContent = depth >= n-1 ? 'all previous' : `last ${depth}`;
+  Object.assign(S,{from:f,to:t,surah:+$('surah').value,rep:+$('rep').value,rng:+$('rng').value,sd:depth});
+  saveS(); budget();
+}
+function budget(){
+  const b=$('budget'), m=$('bmain'), note=$('bnote');
+  const n = S.to-S.from+1;
+  const plays = countQueue(S.from,S.to,S.rep,S.rng,depthVal());
+  const A = TEXT[S.surah];
+  const tips = [];
+  if(n > 10) tips.push('Most people memorize 5–10 ayat at a time.');
+  if(!A || A.length < S.to){
+    m.textContent = `${n} ayah${n>1?'s':''} · ${plays} plays`;
+    note.textContent = tips.concat('Size appears once the text loads.').join(' ');
+    b.className='readout'; $('go').disabled=false; return;
+  }
+  const d=[]; for(let i=S.from;i<=S.to;i++) d[i]=estAyah(A[i-1].text,S.surah,i);
+  const q = buildQueue(S.from,S.to,S.rep,S.rng,depthVal());
+  let secs=0;
+  q.forEach((st,i)=>{ secs+=d[st.a]; if(i<q.length-1) secs += drillGap(d[st.a]); });
+  const mb = toMB(secs);
+  m.textContent = `${n} ayah${n>1?'s':''} · ${plays} plays · ≈ ${mmss(secs)} · ≈ ${mb.toFixed(0)} MB`;
+  if(mb > MAX_MB){
+    b.className='readout bad'; $('go').disabled=true;
+    note.textContent = `Too long. Reduce the range, the rounds, or the stack depth. Limit is ${MAX_MB} MB.`;
+  } else if(mb > WARN_MB){
+    b.className='readout warn'; $('go').disabled=false;
+    tips.push(`Long — plays in ${Math.ceil(mb/PART_MB)} parts. Audio may stop at a part boundary if the screen is locked.`);
+    note.textContent = tips.join(' ');
+  } else {
+    b.className='readout ok'; $('go').disabled=false;
+    tips.push('Plays as one track — safe to lock the screen.');
+    note.textContent = tips.join(' ');
+  }
+}
+// Show the ayat with no audio and no download — so a range can be checked and
+// refined before committing to a stitch. Text is tiny and usually cached.
+async function preview(){
+  const n=+$('surah').value, f=+$('from').value, t=+$('to').value;
+  const btn=$('preview'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    await loadSurah(n);
+    if(el) el.pause();
+    SEG=[]; PARTS=[]; TOTAL=0; segI=-1;      // drop any stale player state
+    MODE='drill';
+    VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
+    renderView();
+    $('bar').hidden=true; $('exprow').hidden=true;   // no transport until a real build
+    $('logwrap').hidden=true;                        // nothing downloaded in preview
+    $('copyall').hidden=false;
+    $('ptitle').textContent = `${sName(n)} ${f}–${t}`;
+    $('psub').textContent = 'Preview — text only';
+    showPlayer('sel');
+    toast('Preview — check the range, then Start');
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load the text' : 'Offline — this surah is not saved yet');
+  }
+  btn.disabled=false; btn.textContent='Show text';
+}
+// Stitch tab's own preview — same idea, but for the block currently being
+// configured (surah + from/to), so it can be checked before Add block.
+async function stitchPreview(){
+  const n=+$('ssurah').value, f=+$('sfrom').value, t=+$('sto').value;
+  const btn=$('spreview'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    await loadSurah(n);
+    if(el) el.pause();
+    SEG=[]; PARTS=[]; TOTAL=0; segI=-1;
+    MODE='stitch';
+    VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
+    renderView();
+    $('bar').hidden=true; $('exprow').hidden=true;
+    $('logwrap').hidden=true;
+    $('copyall').hidden=false;
+    $('ptitle').textContent = `${sName(n)} ${f}–${t}`;
+    $('psub').textContent = 'Preview — text only';
+    showPlayer('stc');
+    toast('Preview — check the range, then Add block');
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load the text' : 'Offline — this surah is not saved yet');
+  }
+  btn.disabled=false; btn.textContent='Show text';
+}
+// Preview every block added so far, in order — with the same Bismillah
+// breaks the built audio will have — before spending time/data on a build.
+async function stitchPreviewAll(){
+  if(!BLOCKS.length) return toast('No blocks yet — add one first');
+  const btn=$('sprevall'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    for(const b of BLOCKS) await loadSurah(b.surah);
+    if(el) el.pause();
+    SEG=[]; PARTS=[]; TOTAL=0; segI=-1;
+    MODE='stitch';
+    VIEW = stitchView();
+    renderView();
+    $('bar').hidden=true; $('exprow').hidden=true;
+    $('logwrap').hidden=true;
+    $('copyall').hidden=false;
+    const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
+    $('ptitle').textContent = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
+    $('psub').textContent = 'Preview — text only';
+    showPlayer('stc');
+    toast('Preview — check the blocks, then Build');
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load the text' : "Offline — some of this isn't downloaded yet");
+  }
+  btn.disabled=false; btn.textContent='Preview all text';
+}
+async function begin(){
+  const n=+$('surah').value, f=+$('from').value, t=+$('to').value;
+  $('go').disabled=true; $('go').textContent='Preparing…';
+  MODE='drill'; showPlayer('sel'); prepStart(); clearLog();
+  $('copyall').hidden=false;
+  $('ptitle').textContent = `${sNum(n)} ${sName(n)} ${f}–${t}`;
+  $('psub').textContent = 'Drill';
+  const plays = countQueue(f,t,+$('rep').value,+$('rng').value,depthVal());
+  logLine(`Starting drill — ${sName(n)} ${f}–${t}`, 'in');
+  try{
+    logLine('Reading text…', 'in');
+    await loadSurah(n);
+    logLine('Text ready', 'ok');
+    VIEW=[]; for(let i=f;i<=t;i++) VIEW.push({s:n,a:i});
+    renderView();
+    LABEL = `${sNum(n)} ${sName(n)} ${f}-${t} drill ${S.rep}x${S.rng}`;
+    ensureEl();   // create the audio element now; do NOT await a source-less
+                  // play() here — on some Android browsers that promise never
+                  // settles until the next screen tap, which freezes the whole
+                  // prepare. startOrArm() below handles starting playback.
+
+    const q = buildQueue(f,t,+$('rep').value,+$('rng').value,depthVal());
+    const items = q.map(x=>({s:n, a:x.a, meta:x}));
+    const uniq = new Set(items.map(x=>x.s+':'+x.a)).size;
+    logLine(`Gathering ${uniq} ayah file${uniq>1?'s':''} for ${plays} plays`, 'in');
+    DL = {cache:0, net:0};
+    const r = await stitch(items, d => drillGap(d)*1000, prog);
+    logProgDone(`Audio ready — ${DL.cache} saved, ${DL.net} downloaded`);
+    logLine('Stitching into one track…', 'in');
+    $('pos').textContent='Stitching…';
+    PARTS=r.parts; SEG=r.seg; TOTAL=r.total; prepEnd();
+    const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+    logLine(`Built ${mmss(TOTAL)} · ${mb.toFixed(1)} MB · ${PARTS.length} part${PARTS.length>1?'s':''}`, 'ok');
+    loadPart(0); media(); segI=-1; tick(); showExport();
+    // Preparation is done and successful. Starting the audio is a SEPARATE
+    // step that can be blocked: on mobile the browser only allows play() for a
+    // few seconds after a tap, and a long download outlives that window. So if
+    // play() is refused, show a clean ready state — not an error — and let the
+    // Play button (a fresh tap) start it.
+    await startOrArm();
+  }catch(e){
+    prepEnd(); $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
+    logError(e);
+    toast(navigator.onLine ? (e.message||'Could not prepare') : 'Offline — this range is not downloaded');
+  }
+  $('go').disabled=false; $('go').textContent='Start drill';
+}
+// Try to begin playback; if the browser blocks it, arm a tap-to-play state.
+async function startOrArm(){
+  try{
+    await el.play();
+    logLine('Playing ▶', 'ok');
+    if(PARTS.length>1) toast(`Ready — playing in ${PARTS.length} parts`);
+  }catch(e){
+    segI=-1; tick();                       // show the first ayah, paused at 0:00
+    $('phase').textContent='Ready'; $('phase').className='';
+    $('pos').textContent=`Tap Play to begin · ${mmss(TOTAL)}`;
+    $('play').textContent='Play';
+    logLine('Ready — tap Play to begin', 'ok');
+    toast('Ready — tap Play to begin');
+  }
+}
+
+/* -------------------------------------------------------------- stitch tab */
+const blockAyat = b => b.to - b.from + 1;
+// Bismillah here is a block-boundary marker, not a recitation — it tells the
+// listener "a block starts here," including into Surah 9 (which has no
+// canonical Bismillah) and even when the next block picks up exactly where
+// the last one left off. The one true exception is a block starting at
+// Al-Fātiḥah 1:1 — that ayah already IS the Bismillah, so adding another
+// would just repeat it.
+const blockOpensWithBismillah = b => !(b.surah===1 && b.from===1);
+function stitchItems(){
+  const items = [];
+  BLOCKS.forEach(b=>{
+    if(blockOpensWithBismillah(b))
+      items.push({s:1, a:1, meta:{k:'listen', bism:true}});
+    for(let i=b.from;i<=b.to;i++) items.push({s:b.surah, a:i, meta:{k:'listen'}});
+  });
+  return items;
+}
+function stitchView(){
+  const v = [];
+  BLOCKS.forEach(b=>{
+    const brk = blockOpensWithBismillah(b);
+    for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i, brk: brk && i===b.from});
+  });
+  return v;
+}
+function renderBlocks(){
+  const box = $('blocks');
+  if(!BLOCKS.length){
+    box.innerHTML = `<div class="empty">No blocks yet. Choose a surah and range above, then Add block.</div>`;
+  } else {
+    box.innerHTML='';
+    BLOCKS.forEach((b,i)=>{
+      const brk = blockOpensWithBismillah(b);
+      const d = document.createElement('div'); d.className='card';
+      d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat${brk?' · <span style="color:var(--gold)">opens with Bismillah</span>':''}</small></div><button class="x">×</button>`;
+      d.querySelector('b').textContent = `${i+1}. ${sName(b.surah)} ${b.from}–${b.to}`;
+      d.querySelector('.x').onclick = ()=>{ BLOCKS.splice(i,1); saveB(); renderBlocks(); };
+      box.appendChild(d);
+    });
+  }
+  sreadout();
+}
+function sreadout(){
+  const m=$('smain'), note=$('snote'), r=$('sreadout');
+  const on = v => { $('sbuild').disabled=!v; $('sexp').disabled=!v; $('sprevall').disabled=!v; };
+  if(!BLOCKS.length){ m.textContent='No blocks yet'; note.textContent=''; r.className='readout'; on(false); return; }
+  const ayat = BLOCKS.reduce((a,b)=>a+blockAyat(b),0);
+  let secs=0, known=true;
+  BLOCKS.forEach(b=>{
+    const A = TEXT[b.surah];
+    if(!A){ known=false; return; }
+    for(let i=b.from;i<=b.to;i++) secs += estAyah(A[i-1].text, b.surah, i) + stitchGap();
+  });
+  if(!known){
+    m.textContent = `${BLOCKS.length} block${BLOCKS.length>1?'s':''} · ${ayat} ayat`;
+    note.textContent = 'Size appears once every surah\u2019s text has loaded.';
+    r.className='readout'; on(true); return;
+  }
+  const mb = toMB(secs);
+  m.textContent = `${BLOCKS.length} block${BLOCKS.length>1?'s':''} · ${ayat} ayat · ≈ ${mmss(secs)} · ≈ ${mb.toFixed(0)} MB`;
+  if(mb > MAX_MB){ r.className='readout bad'; on(false);
+    note.textContent = `Too long — limit is ${MAX_MB} MB. Remove a block.`; }
+  else if(mb > WARN_MB){ r.className='readout warn'; on(true);
+    note.textContent = `Long — saves as a zip of ${Math.ceil(mb/PART_MB)} files, and playback may pause at a part boundary if the screen is locked.`; }
+  else { r.className='readout ok'; on(true);
+    note.textContent = 'Plays as one track — safe to lock the screen.'; }
+}
+async function addBlock(){
+  const b = {surah:+$('ssurah').value, from:+$('sfrom').value, to:+$('sto').value};
+  if(b.to < b.from) b.to = b.from;
+  BLOCKS.push(b); saveB(); renderBlocks();
+  try{ await loadSurah(b.surah); }catch(e){}
+  renderBlocks();
+  toast(`Added ${sName(b.surah)} ${b.from}–${b.to}`);
+}
+async function buildStitch(andPlay){
+  if(!BLOCKS.length) return;
+  MODE='stitch';
+  const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
+  LABEL = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
+  // Numbered only when every block is the same surah — a single leading
+  // number would be misleading once blocks span more than one.
+  const oneSurah = BLOCKS.every(b=>b.surah===BLOCKS[0].surah);
+  if(oneSurah) LABEL = `${sNum(BLOCKS[0].surah)} ${LABEL}`;
+  $('sbuild').disabled=true; $('sexp').disabled=true;
+  showPlayer('stc'); prepStart(); clearLog();
+  $('copyall').hidden=false;
+  $('ptitle').textContent = 'Listening track';
+  $('psub').textContent = LABEL;
+  logLine(`Building track — ${BLOCKS.length} block${BLOCKS.length>1?'s':''}`, 'in');
+  try{
+    logLine('Reading text…', 'in');
+    for(const b of BLOCKS) await loadSurah(b.surah);
+    logLine('Text ready', 'ok');
+    VIEW = stitchView(); renderView();
+    ensureEl();   // see note in begin() — never await a source-less play()
+    const items = stitchItems();
+    const uniq = new Set(items.map(x=>x.s+':'+x.a)).size;
+    logLine(`Gathering ${uniq} ayah file${uniq>1?'s':''}`, 'in');
+    DL = {cache:0, net:0};
+    const gap = stitchGap() * 1000;
+    const r = await stitch(items, ()=>gap, prog);
+    logProgDone(`Audio ready — ${DL.cache} saved, ${DL.net} downloaded`);
+    logLine('Stitching into one track…', 'in');
+    $('pos').textContent='Stitching…';
+    PARTS=r.parts; SEG=r.seg; TOTAL=r.total; prepEnd();
+    const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+    logLine(`Built ${mmss(TOTAL)} · ${mb.toFixed(1)} MB · ${PARTS.length} part${PARTS.length>1?'s':''}`, 'ok');
+    loadPart(0); media(); segI=-1; tick(); showExport();
+    if(andPlay) await startOrArm();
+    else { exportAudio(); logLine('Saving file…', 'ok'); }
+  }catch(e){
+    prepEnd(); $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
+    logError(e);
+    toast(navigator.onLine ? (e.message||'Could not build') : 'Offline — these ayat are not downloaded');
+  }
+  sreadout();
+}
+
+/* ---------------------------------------------------------- saved / backup */
+function renderLists(){
+  const box=$('lists');
+  if(!LISTS.length){ box.innerHTML=`<div class="empty">No saved ranges yet.</div>`; return; }
+  box.innerHTML='';
+  LISTS.slice().sort(byNewest).forEach(l=>{
+    const d=document.createElement('div'); d.className='card';
+    d.innerHTML=`<div class="g"><div class="card-toprow"><b></b><span class="card-ts"></span></div><small>${sName(l.surah)} ${l.from}–${l.to} · ${l.rep}× each · ${l.rng}× range</small></div><button class="x">×</button>`;
+    d.querySelector('b').textContent=l.name;
+    d.querySelector('.card-ts').textContent=fmtTS(l.ts);
+    d.querySelector('.g').onclick = async ()=>{
+      $('surah').value=l.surah; fillAyat($('surah'),$('from'),$('to'),l.from,l.to);
+      $('rep').value=l.rep; $('rng').value=l.rng; $('sd').value=l.sd||20;
+      sync(); try{ await loadSurah(l.surah); }catch(e){} budget();
+      tab('sel'); toast(`Loaded “${l.name}”`);
+    };
+    d.querySelector('.x').onclick = e =>{ e.stopPropagation();
+      if(!confirm(`Delete “${l.name}”?`)) return; LISTS.splice(LISTS.indexOf(l),1); saveL(); renderLists(); };
+    box.appendChild(d);
+  });
+}
+function renderRecipes(){
+  const box=$('recipes');
+  if(!RECIPES.length){ box.innerHTML=`<div class="empty">No stitch recipes yet.</div>`; return; }
+  box.innerHTML='';
+  RECIPES.slice().sort(byNewest).forEach(rc=>{
+    const ayat = rc.blocks.reduce((a,b)=>a+blockAyat(b),0);
+    const d=document.createElement('div'); d.className='card';
+    d.innerHTML=`<div class="g"><div class="card-toprow"><b></b><span class="card-ts"></span></div><small>${rc.blocks.length} block${rc.blocks.length>1?'s':''} · ${ayat} ayat</small></div><button class="x">×</button>`;
+    d.querySelector('b').textContent=rc.name;
+    d.querySelector('.card-ts').textContent=fmtTS(rc.ts);
+    d.querySelector('.g').onclick = async ()=>{
+      BLOCKS = rc.blocks.map(b=>Object.assign({},b)); saveB(); renderBlocks();
+      for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
+      renderBlocks(); tab('stc'); toast(`Loaded “${rc.name}”`);
+    };
+    d.querySelector('.x').onclick = e =>{ e.stopPropagation();
+      if(!confirm(`Delete “${rc.name}”?`)) return; RECIPES.splice(RECIPES.indexOf(rc),1); saveR(); renderRecipes(); };
+    box.appendChild(d);
+  });
+}
+function saveRange(){
+  const name=(prompt('Name this range:', `${sName(+$('surah').value)} ${$('from').value}–${$('to').value}`)||'').trim();
+  if(!name) return;
+  LISTS.push({name, surah:+$('surah').value, from:+$('from').value, to:+$('to').value,
+              rep:+$('rep').value, rng:+$('rng').value, sd:+$('sd').value, ts:Date.now()});
+  saveL(); toast(`Saved “${name}”`);
+}
+// Reset the whole Memorize setup back to defaults — surah, range and every
+// repetition setting. Doesn't touch saved ranges (Saved tab) or anything
+// downloaded/cached; those are separate from what's just being configured.
+async function clearRange(){
+  $('sfilter').value = ''; $('sfhint').hidden = true;
+  fillSurahSelect($('surah'));
+  $('surah').value = DEF.surah;
+  fillAyat($('surah'),$('from'),$('to'),DEF.from,DEF.to);
+  $('rep').value = DEF.rep; $('rng').value = DEF.rng; $('sd').value = DEF.sd;
+  sync(); try{ await loadSurah(DEF.surah); }catch(e){} budget();
+  toast('Cleared — back to defaults');
+}
+function saveRecipe(){
+  if(!BLOCKS.length) return toast('Add some blocks first');
+  const name=(prompt('Name this recipe:', 'Morning revision')||'').trim();
+  if(!name) return;
+  RECIPES.push({name, blocks:BLOCKS.map(b=>Object.assign({},b)), ts:Date.now()}); saveR();
+  toast(`Saved “${name}”`);
+}
+function exportBackup(){
+  saveBlob(new Blob([JSON.stringify({app:'hifz', v:3, exported:new Date().toISOString(),
+    settings:S, lists:LISTS, recipes:RECIPES, blocks:BLOCKS, verses:VERSES, bookmarks:BOOKMARKS}, null, 2)],{type:'application/json'}),
+    `hifz-backup-${new Date().toISOString().slice(0,10)}.json`);
+  toast('Backup saved. Keep it somewhere safe.');
+}
+function importBackup(file){
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const d = JSON.parse(rd.result);
+      const inc = Array.isArray(d) ? {lists:d} : d;
+      if(!inc || typeof inc !== 'object') throw 0;
+      let n = 0;
+      if(Array.isArray(inc.lists)){
+        const seen = new Set(LISTS.map(l=>l.name+l.surah+l.from+l.to));
+        inc.lists.forEach(l=>{ if(typeof l.surah!=='number') return;
+          const k=l.name+l.surah+l.from+l.to; if(seen.has(k)) return;
+          seen.add(k); if(!l.ts) l.ts=Date.now(); LISTS.push(l); n++; });
+        saveL();
+      }
+      if(Array.isArray(inc.recipes)){
+        const seen = new Set(RECIPES.map(x=>x.name));
+        inc.recipes.forEach(x=>{ if(!Array.isArray(x.blocks) || seen.has(x.name)) return;
+          seen.add(x.name); if(!x.ts) x.ts=Date.now(); RECIPES.push(x); n++; });
+        saveR();
+      }
+      if(Array.isArray(inc.blocks)){ BLOCKS = inc.blocks; saveB(); }
+      if(Array.isArray(inc.bookmarks)){
+        const seen=new Set(BOOKMARKS.map(b=>b.s+':'+b.a));
+        inc.bookmarks.forEach(b=>{ if(typeof b.s!=='number') return; const k=b.s+':'+b.a;
+          if(seen.has(k)) return; seen.add(k); if(!b.ts) b.ts=Date.now(); BOOKMARKS.push(b); });
+        saveBK();
+      }
+      if(Array.isArray(inc.verses)){
+        const seen = new Set(VERSES.map(v=>v.s+':'+v.a));
+        inc.verses.forEach(v=>{ if(typeof v.s!=='number') return; const k=v.s+':'+v.a;
+          if(seen.has(k)) return; seen.add(k); if(!v.ts) v.ts=Date.now(); VERSES.push(v); n++; });
+        saveV();
+      }
+      if(inc.settings && typeof inc.settings==='object'){ S = Object.assign({}, DEF, inc.settings); saveS(); }
+      renderLists(); renderRecipes(); renderBlocks(); renderVerses(); applySettings(); budget();
+      toast(n ? `Imported ${n} item${n>1?'s':''}` : 'Backup restored');
+    }catch(e){ toast("That file isn't a Hifz backup"); }
+  };
+  rd.readAsText(file);
+}
+async function resetAll(){
+  if(!confirm('Reset everything?\n\nThis wipes downloaded audio, cached text, saved ranges, recipes and settings.\n\nExport a backup first if you want to keep them.')) return;
+  if(!confirm('Last chance — this cannot be undone. Continue?')) return;
+  try{ await DB.clear('audio'); }catch(e){}
+  try{ await DB.clear('text');  }catch(e){}
+  try{ Object.keys(localStorage).filter(k=>k.indexOf('hifz.')===0).forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  location.reload();
+}
+async function cacheInfo(){
+  try{
+    const k = await DB.keys('audio');
+    const mine = k.filter(x=>String(x).indexOf(S.qari)===0);
+    let q = '';
+    if(navigator.storage && navigator.storage.estimate){
+      try{ const e = await navigator.storage.estimate();
+           q = ` · ${(e.usage/1048576).toFixed(1)} MB used`; }catch(e){}
+    }
+    $('cinfo').textContent = `${mine.length} ayah${mine.length===1?'':'s'} for this reciter · ${k.length} in total${q}. Audio is kept automatically as you play.`;
+  }catch(e){ $('cinfo').textContent = 'Storage unavailable — see Diagnostics below.'; }
+}
+
+/* ------------------------------------------------------------ diagnostics */
+async function diagnose(){
+  const box=$('diag'); box.innerHTML='';
+  const add=(st,label,detail)=>{
+    const d=document.createElement('div'); d.className='diag';
+    d.innerHTML=`<i class="${st}">${st==='ok'?'✓':st==='no'?'✗':'!'}</i><div><b></b><small></small></div>`;
+    d.querySelector('b').textContent=label; d.querySelector('small').textContent=detail||'';
+    box.appendChild(d);
+  };
+  const sec = window.isSecureContext;
+  add(sec?'ok':'no','Secure context',
+      sec ? location.protocol+'//' : `${location.protocol}// — the checks below are likely blocked because of this. Serving this same file over https:// fixes it.`);
+  if(!('wakeLock' in navigator)) add('no','Keep screen awake','Not supported by this browser.');
+  else { try{ const w=await navigator.wakeLock.request('screen'); await w.release();
+               add('ok','Keep screen awake','Works.'); }
+         catch(e){ add('no','Keep screen awake',(e.name||'Blocked')+' — usually because the page is not on https://'); } }
+  try{ await DB.probe(); add('ok','Offline storage','Working — downloads persist between sessions.'); }
+  catch(e){ add('no','Offline storage','Blocked. Every session re-downloads, and the cache buttons do nothing.'); }
+  add('mediaSession' in navigator?'ok':'mb','Lock-screen controls',
+      'mediaSession' in navigator ? 'Available.' : 'Not available.');
+  const mp3 = document.createElement('audio').canPlayType('audio/mpeg');
+  add(mp3?'ok':'no','MP3 playback', mp3 ? 'Supported ('+mp3+').' : 'Not supported.');
+  if(navigator.storage && navigator.storage.estimate){
+    try{ const q=await navigator.storage.estimate();
+      add('ok','Storage quota', `${(q.usage/1048576).toFixed(1)} MB used of ${(q.quota/1048576).toFixed(0)} MB.`);
+    }catch(e){ add('mb','Storage quota','Unknown.'); }
+  } else add('mb','Storage quota','Cannot be measured here.');
+  add('mb','Browser', navigator.userAgent);
+}
+
+/* ----------------------------------------------------------------- wiring */
+let playerBack = 'sel';    // which tab the player's back-arrow returns to
+// The bottom nav has four items (sel/stc/sav/set). The player (drl) and guide
+// (gde) are sub-views: they show over a nav section and keep it highlighted.
+function navHi(id){
+  document.querySelectorAll('#nav button').forEach(b=> b.setAttribute('aria-selected', String(b.dataset.tab===id)));
+}
+function hideAllPanels(){ ['rd','sel','drl','stc','sav','set','gde','more'].forEach(t=> $('p-'+t).hidden = true); }
+function tab(id){
+  hideAllPanels(); $('p-'+id).hidden = false;
+  const navMap = {drl:playerBack, sav:'more', set:'more', gde:'more'};
+  navHi(navMap[id] || id);
+  if(id==='rd'){ ensureReadTab(); updateContinueChip(); }
+  else{ $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; stopAyahPlayer(); }
+  if(id==='sav'){ renderBookmarks(); renderVerses(); renderLists(); renderRecipes(); }
+  if(id==='stc') renderBlocks();
+  if(id==='set'){ cacheInfo(); if(!$('diag').children.length) diagnose(); }
+  document.querySelector('main').scrollTop = 0;
+}
+let readReady = false;
+let readTabScrolled = false;   // true after first manual scroll — guards last-read tracking
+function ensureReadTab(){
+  if(readReady || !SURAHS.length) return; readReady = true;
+  const sel = $('rdsurah');
+  sel.innerHTML = SURAHS.map(s=>`<option value="${s.n}">${s.n}. ${s.en} — ${displayAr(s.ar)}</option>`).join('');
+  // Open at last-read position if one exists; otherwise Al-Fatiha
+  const target = LASTREAD || {s:1, a:1};
+  rdSurah = target.s;
+  sel.value = rdSurah;
+  loadSurah(rdSurah).then(()=>{
+    renderReadSurah(rdSurah);
+    // Scroll to last-read ayah after a short render delay
+    if(LASTREAD && LASTREAD.a > 1){
+      setTimeout(()=> scrollToAyah(LASTREAD.s, LASTREAD.a, true), 120);
+    }
+  }).catch(()=>{});
+}
+// Show the now-playing view, remembering where its back arrow returns to.
+function showPlayer(origin){ playerBack = origin || 'sel'; tab('drl'); }
+function toggle(node, key, after){
+  node.onclick = ()=>{ S[key]=!S[key]; node.setAttribute('aria-checked',String(S[key])); saveS(); after&&after(); };
+}
+function paintGapModes(){
+  document.querySelectorAll('#gapmode button').forEach(b=>
+    b.setAttribute('aria-checked', String(b.dataset.v===S.gapmode)));
+  $('gapwrap').style.display  = S.gapmode==='fixed'  ? '' : 'none';
+  $('gaphint').textContent =
+    S.gapmode==='none'  ? 'Ayat follow on with no pause.' :
+    S.gapmode==='echo'  ? 'After each ayah, a silence as long as it — recite it back before the next.' :
+                          'A fixed pause after each ayah.';
+}
+function applySettings(){
+  $('qari').value = S.qari;
+  $('gap').value = S.gap;  $('gaplbl').textContent=(+S.gap).toFixed(1)+'s';
+  $('asz').value = S.asz;  $('aszlbl').textContent=S.asz+'px';
+  $('uisz').value = S.uisz; $('uiszlbl').textContent=S.uisz+'px';
+  document.documentElement.style.setProperty('--uisz', S.uisz+'px');
+  $('rep').value = S.rep; $('rng').value = S.rng; $('sd').value = S.sd;
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+  ['hl','veil','bism','wake','lyrics'].forEach(k=>{
+    const n=$('t-'+k); if(n) n.setAttribute('aria-checked', String(!!S[k])); });
+  paintGapModes();
+}
+/* ============================ READ + SEARCH ============================= */
+let QURAN = [], QIDX = [];
+
+// Normalise Arabic: drop harakat/tatweel, fold letter variants. Used for
+// harakat-insensitive matching (typed with or without diacritics both work).
+const stripArabic = s => s
+  .replace(/[\u064B-\u065F\u0640\u06D6-\u06ED\u06E5\u06E6]/g,'')
+  .replace(/\u0629/g,'\u0647').replace(/\u0649/g,'\u064A')
+  .replace(/\u0624/g,'\u0648').replace(/\u0626/g,'\u064A').replace(/\u0621/g,'')
+  .replace(/[\u0622\u0623\u0625\u0671\u0627\u0670]/g,'')
+  .replace(/(.)\1+/g,'$1')
+  .replace(/\s+/g,' ').trim();
+// Phonetic fold: collapse letters Latin can't tell apart — a fuzzy fallback so
+// an imperfect transliteration still finds its verse.
+const phonFold = s => stripArabic(s)
+  .replace(/[\u062D\u062E\u0647]/g,'\u0647').replace(/[\u0635\u062B\u0633]/g,'\u0633')
+  .replace(/[\u0637\u062A]/g,'\u062A').replace(/[\u0636\u062F]/g,'\u062F')
+  .replace(/[\u0638\u0630\u0632]/g,'\u0632').replace(/[\u0639\u0627]/g,'\u0627')
+  .replace(/[\u0642\u0643]/g,'\u0643').replace(/(.)\1+/g,'$1');
+// Latin -> Arabic best-effort (short vowels are harakat, so they drop).
+function translitToArabic(s){
+  let x = s.toLowerCase().trim();
+  const dg=[['kh','خ'],['sh','ش'],['th','ث'],['dh','ذ'],['gh','غ'],['aa','ا'],['ee','ي'],['oo','و'],['ou','و']];
+  for(const [k,v] of dg) x = x.split(k).join(v);
+  const common = {allah:'الله',bismillah:'بسم الله',muhammad:'محمد',quran:'قرآن',rahman:'رحمن',raheem:'رحيم',rahim:'رحيم'};
+  if(common[x]) return common[x];
+  const map={a:'',e:'',i:'',o:'',u:'',b:'ب',t:'ت',j:'ج',h:'ه',d:'د',r:'ر',z:'ز',s:'س',c:'ك',
+    q:'ق',k:'ك',l:'ل',m:'م',n:'ن',w:'و',y:'ي',f:'ف',p:'ب',g:'ج',' ':' ','-':''};
+  let out=''; for(const ch of x) out += (ch in map)? map[ch] : '';
+  return out.replace(/(.)\1+/g,'$1');
+}
+async function loadQuran(){
+  if(QIDX.length) return true;
+  let all=null;
+  try{ all = await DB.get('text','__all__'); }catch(e){}
+  if(!all){
+    const r = await fetchT(`${API}/quran/quran-uthmani`, 40000);
+    if(!r.ok) throw E('NET_QURAN_'+r.status,'Could not load the Qur\u2019an text');
+    const data = (await r.json()).data;
+    all = [];
+    data.surahs.forEach(su=> su.ayahs.forEach(a=>{
+      let t = a.text.replace(/^\uFEFF/,'');
+      if(a.numberInSurah===1 && su.number!==1 && su.number!==9 && BISM && t.startsWith(BISM))
+        t = t.slice(BISM.length).trim();
+      all.push({s:su.number, a:a.numberInSurah, text:t});
+    }));
+    try{ await DB.put('text','__all__', all); }catch(e){}
+  }
+  QURAN = all;
+  QIDX = all.map(x=>({x, norm:stripArabic(x.text), fold:phonFold(x.text)}));
+  return true;
+}
+function searchQuran(arabicQuery){
+  const precise = stripArabic(arabicQuery);
+  if(!precise) return [];
+  let hits = QIDX.filter(o=>o.norm.includes(precise));
+  if(hits.length===0){
+    const f = phonFold(arabicQuery);
+    if(f) hits = QIDX.filter(o=>o.fold.includes(f));
+  }
+  return hits.map(o=>o.x);
+}
+const verseRef = (s,a) => `${sName(s)} ${s}:${a}`;
+const verseCopy = (s,a,text) => `${text}\n— ${verseRef(s,a)}`;
+const isSaved = (s,a) => VERSES.some(v=>v.s===s && v.a===a);
+const isBkd   = (s,a) => BOOKMARKS.some(b=>b.s===s && b.a===a);
+function toggleBookmark(s,a,text){
+  const i=BOOKMARKS.findIndex(b=>b.s===s&&b.a===a);
+  if(i>=0){ BOOKMARKS.splice(i,1); toast('Bookmark removed'); }
+  else if(BOOKMARKS.length>=10){ toast('Max 10 bookmarks — remove one first'); return false; }
+  else { BOOKMARKS.unshift({s,a,text,ts:Date.now()}); toast('Bookmarked'); }
+  saveBK(); return true;
+}
+function updateLastRead(s,a){
+  if(!readTabScrolled) return;   // ignore initial render — only track real scrolling
+  LASTREAD={s,a}; saveLR(); updateContinueChip();
+}
+// Blank the browse view back to nothing-picked — filter text, surah
+// selection, and the rendered verses. LASTREAD (and the "Continue reading"
+// chip) is separate memory of where you left off, not what's on screen right
+// now, so it's untouched — nothing here can move it, since readTabScrolled
+// is false and there's no ayah on screen for a scroll to report anyway.
+function clearReadView(){
+  $('rdfilter').value = '';
+  const sel = $('rdsurah');
+  let ph = sel.querySelector('option[value=""]');
+  if(!ph){
+    ph = document.createElement('option'); ph.value=''; ph.textContent='— choose a surah —';
+    sel.insertBefore(ph, sel.firstChild);
+  }
+  sel.value = '';
+  rdSurah = null; readTabScrolled = false;
+  $('rdtext').innerHTML = '<div class="empty">Pick a surah to read, or search above.</div>';
+}
+function updateContinueChip(){
+  if(!LASTREAD||!SURAHS.length){ $('continuechip').hidden=true; return; }
+  $('continuechip').hidden=false;
+  $('continuelabel').textContent=`Continue reading — ${verseRef(LASTREAD.s,LASTREAD.a)}`;
+}
+
+let rdSurah = 1;
+function renderReadSurah(n){
+  rdSurah = n; readTabScrolled = false;   // reset scroll tracking for new surah
+  const box = $('rdtext'); box.innerHTML='';
+  const arr = TEXT[n];
+  if(!arr){ box.innerHTML = '<div class="empty">Loading…</div>'; return; }
+  if(n!==1 && n!==9){
+    const b=document.createElement('div'); b.className='bismline'; b.textContent=BISM; box.appendChild(b);
+  }
+  arr.forEach(a=> box.appendChild(verseRowEl(n, a.n, a.text, false)));
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+}
+// A verse row used in both the reader and the results list.
+// ---- highlight engine: phrase-first, per-word fallback (min 3 chars) ----
+function hlSegments(rawText, query){
+  if(!query) return [{text:rawText, hl:false}];
+  const normChars=[];
+  for(let i=0;i<rawText.length;i++){
+    const s=stripArabic(rawText[i]); if(s) normChars.push({norm:s,orig:i});
+  }
+  const normStr=normChars.map(x=>x.norm).join('');
+
+  function findRanges(needles){
+    const ranges=[];
+    for(const needle of needles){
+      if(!needle||needle.length<2) continue;   // skip single-char fragments
+      let p=0;
+      while(p<=normStr.length-needle.length){
+        const idx=normStr.indexOf(needle,p); if(idx<0) break;
+        const s=normChars[idx]?.orig;
+        const e=(normChars[Math.min(idx+needle.length-1,normChars.length-1)]?.orig??0)+1;
+        if(s!=null) ranges.push({s,e}); p=idx+1;
+      }
+    }
+    return ranges;
+  }
+
+  // Try the whole phrase first; fall back to per-word only if no matches.
+  const phrase=stripArabic(query);
+  let ranges=findRanges([phrase]);
+  if(!ranges.length){
+    const words=phrase.split(' ').filter(w=>w.length>=3);   // min 3 chars
+    ranges=findRanges(words);
+  }
+  if(!ranges.length) return [{text:rawText,hl:false}];
+
+  ranges.sort((a,b)=>a.s-b.s);
+  const merged=[{...ranges[0]}];
+  for(let i=1;i<ranges.length;i++){
+    const last=merged[merged.length-1];
+    if(ranges[i].s<=last.e) last.e=Math.max(last.e,ranges[i].e);
+    else merged.push({...ranges[i]});
+  }
+  const segs=[]; let pos=0;
+  for(const r of merged){
+    if(pos<r.s) segs.push({text:rawText.slice(pos,r.s),hl:false});
+    segs.push({text:rawText.slice(r.s,r.e),hl:true});
+    pos=r.e;
+  }
+  if(pos<rawText.length) segs.push({text:rawText.slice(pos),hl:false});
+  return segs;
+}
+// Render a .vtext div with amber highlights on matched segments.
+function setVtext(el, rawText, query){
+  el.innerHTML='';
+  const segs = query ? hlSegments(rawText, query) : [{text:rawText,hl:false}];
+  segs.forEach(seg=>{
+    if(seg.hl){
+      const sp=document.createElement('span'); sp.className='hl';
+      sp.textContent=seg.text; el.appendChild(sp);
+    } else el.appendChild(document.createTextNode(seg.text));
+  });
+}
+let lastQuery=''; // persists so back-to-results restores the highlighted view
+// A verse row used in both the reader and results list.
+/* ---- per-ayah inline player ---- */
+let ayahAudio = null, ayahAbort = null;
+let autoPlaying = false, autoSurah = 0, autoAyah = 0, autoReps = 1;
+// Global chip state — shared across all ayah rows so they always agree
+let globalReps = 1, globalFlow = false;
+let userScrolled = false, scrollResumeTimer = null;
+const SCROLL_PAUSE_MS = 3000;
+
+// SVGs for play/stop icon swap
+const PLAY_SVG = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+const STOP_SVG = `<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>`;
+
+// Repaint ALL chip sets in the document to reflect global state.
+// This ensures tapping one row's chip updates every other row too.
+function repaintAllChips(){
+  document.querySelectorAll('.rep-chip').forEach(c=>{
+    const isFlow = c.dataset.r==='flow';
+    const isRep  = !isFlow && +c.dataset.r===globalReps;
+    c.classList.toggle('active', globalFlow ? isFlow : isRep);
+  });
+  // helper text: show under all ayah-play rows when flow is active
+  document.querySelectorAll('.flow-hint').forEach(el=>{
+    el.hidden = !globalFlow;
+  });
+}
+
+function setPlayBtn(btn, playing){
+  btn.innerHTML = playing ? STOP_SVG : PLAY_SVG;
+  btn.classList.toggle('playing', playing);
+}
+
+function scrollToAyah(s, a, instant){
+  const el = document.querySelector(`.vrow[data-s="${s}"][data-a="${a}"]`);
+  const main = document.querySelector('main');
+  if(!el || !main) return;
+  // 30% from top
+  const top = el.offsetTop - main.clientHeight * 0.30;
+  main.scrollTo({top: Math.max(0, top), behavior: instant ? 'instant' : 'smooth'});
+}
+
+function updateNowBar(s, a, repI, totalReps, auto){
+  const ref = `${sName(s)} · Ayah ${a}`;
+  const rep = auto
+    ? `Flow · rep ${repI} of ${totalReps} each · tap bar to return`
+    : `Rep ${repI} of ${totalReps}`;
+  $('nbref').textContent = ref;
+  $('nbrep').textContent = rep;
+  $('nowbar').hidden = false;
+}
+
+function hideNowBar(){ $('nowbar').hidden = true; }
+
+function stopAyahPlayer(){
+  if(ayahAbort) ayahAbort();
+  ayahAbort = null; ayahAudio = null;
+  autoPlaying = false; globalFlow = false;
+  document.querySelectorAll('.ayah-playbtn').forEach(b=>setPlayBtn(b, false));
+  document.querySelectorAll('.ayah-progfill').forEach(f=>{ f.style.width='0%'; });
+  repaintAllChips();
+  hideNowBar();
+  clearTimeout(scrollResumeTimer);
+}
+
+function onUserScroll(){
+  readTabScrolled = true;   // first scroll = user is genuinely reading
+  userScrolled = true;
+  clearTimeout(scrollResumeTimer);
+  scrollResumeTimer = setTimeout(()=>{
+    userScrolled = false;
+    if(autoPlaying) scrollToAyah(autoSurah, autoAyah, false);
+  }, SCROLL_PAUSE_MS);
+}
+
+async function playAyahReps(s, a, reps, btn, progFill, auto){
+  // stop any previous
+  if(ayahAbort){ ayahAbort(); await new Promise(r=>setTimeout(r,50)); }
+  const url = audioURL(S.qari, s, a);
+  const audio = new Audio();
+  ayahAudio = audio; audio.src = url;
+  autoSurah = s; autoAyah = a;
+  let cancelled = false;
+  ayahAbort = ()=>{ cancelled=true; try{audio.pause();}catch(e){}};
+
+  // show play state
+  document.querySelectorAll('.ayah-playbtn').forEach(b=>setPlayBtn(b, false));
+  setPlayBtn(btn, true);
+  if(progFill) progFill.style.width='0%';
+
+  // scroll to the ayah (unless user is manually scrolling)
+  if(!userScrolled) scrollToAyah(s, a, false);
+
+  let tickId;
+  try{
+    for(let i=1; i<=reps; i++){
+      if(cancelled) break;
+      updateNowBar(s, a, i, reps, auto);
+      if(progFill){
+        const startFrac = (i-1)/reps;
+        tickId = setInterval(()=>{
+          if(!audio.duration||cancelled){ clearInterval(tickId); return; }
+          const within = audio.currentTime/audio.duration;
+          progFill.style.width=((startFrac+within/reps)*100).toFixed(1)+'%';
+        }, 200);
+      }
+      audio.currentTime = 0;
+      await audio.play();
+      await new Promise((res,rej)=>{
+        audio.onended = res;
+        audio.onerror = rej;
+        const prev = ayahAbort;
+        ayahAbort = ()=>{ cancelled=true; audio.pause(); rej(new Error('stopped')); prev&&prev(); };
+      });
+      clearInterval(tickId);
+    }
+    if(progFill && !cancelled){ progFill.style.width='100%';
+      setTimeout(()=>{ if(progFill) progFill.style.width='0%'; },500); }
+  }catch(e){ clearInterval(tickId); }
+
+  setPlayBtn(btn, false);
+  ayahAudio = null;
+  return !cancelled;
+}
+
+async function autoPlayFrom(s, startA, reps){
+  autoPlaying = true;
+  autoReps = reps;
+  const ayat = TEXT[s]||[];
+  for(let i=0; i<ayat.length; i++){
+    const ay = ayat[i];
+    if(ay.n < startA) continue;
+    if(!autoPlaying) break;
+    autoSurah = s; autoAyah = ay.n;
+    // find the row element for this ayah
+    const row = document.querySelector(`.vrow[data-s="${s}"][data-a="${ay.n}"]`);
+    const btn = row?.querySelector('.ayah-playbtn');
+    const pf  = row?.querySelector('.ayah-progfill');
+    const ok = await playAyahReps(s, ay.n, reps, btn||document.createElement('button'), pf, true);
+    if(!ok || !autoPlaying) break;
+    if(i===ayat.length-1){
+      toast(`${sName(s)} — complete`);
+      autoPlaying=false;
+    }
+  }
+  if(!autoPlaying) return;
+  autoPlaying=false; globalFlow=false; repaintAllChips(); hideNowBar();
+}
+
+function verseRowEl(s, a, text, showRef, query){
+  const d = document.createElement('div'); d.className='vrow'; d.dataset.s=s; d.dataset.a=a;
+  const playHtml = !showRef ? `
+    <div class="ayah-play">
+      <button class="ayah-playbtn" title="Play">${PLAY_SVG}</button>
+      <div class="rep-chips">
+        <button class="rep-chip" data-r="1">1×</button>
+        <button class="rep-chip" data-r="3">3×</button>
+        <button class="rep-chip" data-r="flow">Flow</button>
+      </div>
+      <div class="ayah-prog"><div class="ayah-progfill"></div></div>
+    </div>
+    <div class="flow-hint" hidden>Continuous play — surah flows from here · tap Stop to end</div>` : '';
+  // SVG bookmark icon — fills amber when active
+  const bkSvg = `<svg viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  d.innerHTML = `<div class="vtext"></div>
+    <div class="vref"><span class="r"></span>
+      <button class="cp">Copy</button>
+      <button class="sv">Save</button>
+      <button class="bkbtn" title="Bookmark">${bkSvg}</button></div>
+    ${playHtml}`;
+  setVtext(d.querySelector('.vtext'), text, query||'');
+  d.querySelector('.r').textContent = showRef ? verseRef(s,a) : `Ayah ${a}`;
+  const svBtn = d.querySelector('.sv');
+  const bkBtn = d.querySelector('.bkbtn');
+  const paintSv = ()=>{ const on=isSaved(s,a); svBtn.textContent=on?'Saved':'Save'; svBtn.classList.toggle('on',on); };
+  const paintBk = ()=>{ bkBtn.classList.toggle('on',isBkd(s,a)); };
+  paintSv(); paintBk();
+  d.querySelector('.cp').onclick = e=>{ e.stopPropagation(); copyText(verseCopy(s,a,text),'Verse copied'); };
+  svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paintSv(); };
+  bkBtn.onclick = e=>{ e.stopPropagation(); toggleBookmark(s,a,text); paintBk();
+    renderBookmarks && setTimeout(renderBookmarks,0); };
+  if(!showRef){
+    const playBtn  = d.querySelector('.ayah-playbtn');
+    const progFill = d.querySelector('.ayah-progfill');
+    const chips    = d.querySelectorAll('.rep-chip');
+    // paint this row's chips to match current global state
+    chips.forEach(c=>{
+      const isFlow = c.dataset.r==='flow';
+      c.classList.toggle('active', globalFlow ? isFlow : (!isFlow && +c.dataset.r===globalReps));
+    });
+    function startPlay(isFlow){
+      if(isFlow){
+        globalFlow = true; autoPlaying = true;
+        repaintAllChips();
+        autoPlayFrom(s, a, globalReps);
+      } else {
+        globalFlow = false; autoPlaying = false;
+        repaintAllChips();
+        playAyahReps(s, a, globalReps, playBtn, progFill, false);
+      }
+    }
+    chips.forEach(c=>{
+      c.onclick = e=>{ e.stopPropagation();
+        if(c.dataset.r==='flow'){ startPlay(true); }
+        else { globalReps=+c.dataset.r; globalFlow=false; repaintAllChips(); startPlay(false); }
+      };
+    });
+    playBtn.onclick = e=>{ e.stopPropagation();
+      if(playBtn.classList.contains('playing') || autoPlaying){ stopAyahPlayer(); return; }
+      startPlay(globalFlow);
+    };
+  }
+  // debounced last-read: only update after being visible for 800ms (skip first render)
+  if(!showRef && 'IntersectionObserver' in window){
+    let lrTimer = null;
+    const obs = new IntersectionObserver(([en])=>{
+      if(en.isIntersecting){ lrTimer=setTimeout(()=>updateLastRead(s,a), 800); }
+      else { clearTimeout(lrTimer); }
+    },{threshold:.6});
+    obs.observe(d);
+  }
+  if(showRef){ d.dataset.clickable='1'; d.onclick=e=>{ if(e.target.tagName!=='BUTTON') openInContext(s,a,text,query); }; }
+  return d;
+}
+function toggleVerse(s,a,text){
+  const i = VERSES.findIndex(v=>v.s===s && v.a===a);
+  if(i>=0){ VERSES.splice(i,1); toast('Removed from saved'); }
+  else { VERSES.push({s,a,text,ts:Date.now()}); toast('Saved for practice'); }
+  saveV();
+}
+// Design A: nothing runs until Search is tapped.
+async function runSearch(){
+  const q = $('q').value.trim();
+  if(!q) return toast('Type or speak something to search');
+  $('qsearch').disabled=true; $('qsearch').textContent='Searching…';
+  try{
+    await loadQuran();
+    lastQuery = q;
+    showResults(q, searchQuran(q));
+  }catch(e){
+    logError(e);
+    toast(navigator.onLine ? 'Could not load the Qur\u2019an text' : 'Connect once to enable search');
+  }
+  $('qsearch').disabled=false; $('qsearch').textContent='Search';
+}
+function showResults(q, res){
+  $('rd-browse').hidden=true; $('rd-results').hidden=false; $('rd-ctx').hidden=true;
+  $('searchwrap').classList.add('collapsed');   // collapse to pill after search
+  $('reslabel').textContent = res.length
+    ? `${res.length} verse${res.length>1?'s':''} matching \u201C${q}\u201D`
+    : `No verses matched \u201C${q}\u201D — try without harakat, or convert Latin to Arabic first.`;
+  const list=$('reslist'); list.innerHTML='';
+  res.slice(0,300).forEach(v=> list.appendChild(verseRowEl(v.s, v.a, v.text, true, q)));
+  if(res.length>300){ const m=document.createElement('div'); m.className='hint';
+    m.textContent=`Showing first 300 of ${res.length}. Refine your search to narrow it.`; list.appendChild(m); }
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+  document.querySelector('main').scrollTop=0;
+}
+function clearSearch(){
+  $('q').value=''; lastQuery='';
+  $('rd-results').hidden=true; $('rd-ctx').hidden=true; $('rd-browse').hidden=false;
+  $('searchwrap').classList.remove('collapsed');
+}
+// Open a result in its surah context, scroll the target ayah to center, highlight it.
+async function openInContext(s, a, text, query){
+  $('rd-results').hidden=true; $('rd-ctx').hidden=false;
+  $('p-rd').classList.add('ctx-open');
+  $('ctxbar').hidden=false;
+  const label = query
+    ? `${verseRef(s,a)} <span>· Results for "${query}"</span>`
+    : verseRef(s,a);
+  $('ctxbarlabel').innerHTML = label;
+  const box=$('ctxtext'); box.innerHTML='<div class="empty">Loading…</div>';
+  try{
+    await loadSurah(s);
+    box.innerHTML='';
+    if(s!==1&&s!==9){ const b=document.createElement('div'); b.className='bismline'; b.textContent=BISM; box.appendChild(b); }
+    const ayat=(TEXT[s]||[]);
+    ayat.forEach(ay=>{
+      const d=verseRowEl(s,ay.n,ay.text,false, ay.n===a ? query : '');
+      if(ay.n===a){ d.classList.add('cur'); d.id='ctxayah'; }
+      box.appendChild(d);
+    });
+    document.documentElement.style.setProperty('--asz',S.asz+'px');
+    // Scroll target ayah to vertical center of the screen.
+    requestAnimationFrame(()=>{
+      const el2=document.getElementById('ctxayah');
+      const main=document.querySelector('main');
+      if(el2&&main){ const top=el2.offsetTop-(main.clientHeight/2)+(el2.offsetHeight/2);
+        main.scrollTop=Math.max(0,top); }
+    });
+  }catch(e){ box.innerHTML='<div class="empty">Could not load the surah.</div>'; }
+}
+// ---- in-app Arabic keyboard (base letters; variant keys open a sub-panel) ----
+const AK_ROWS = [
+  ['ا','ب','ت','ث','ج','ح','خ'],
+  ['د','ذ','ر','ز','س','ش','ص'],
+  ['ض','ط','ظ','ع','غ','ف','ق'],
+  ['ك','ل','م','ن','ه','و','ي']
+];
+const AK_VARIANTS = {'ا':['ا','أ','إ','آ','ء'],'ه':['ه','ة'],'ي':['ي','ى'],'و':['و','ؤ']};
+let akbdBuilt=false;
+function insCh(ch){ $('q').value += ch; closeVar(); }
+function backspace(){ const i=$('q'); i.value = i.value.slice(0,-1); }
+function closeVar(){ const p=$('varpanel'), h=$('varhint'); if(p)p.remove(); if(h)h.remove(); }
+function openVar(base){
+  closeVar();
+  const box=$('akbd');
+  const hint=document.createElement('div'); hint.className='varhint'; hint.id='varhint';
+  hint.textContent='Choose a form — tap to insert';
+  const p=document.createElement('div'); p.className='varpanel'; p.id='varpanel';
+  AK_VARIANTS[base].forEach(v=>{
+    const k=document.createElement('button'); k.className='akey'; k.type='button'; k.textContent=v;
+    k.addEventListener('click', e=>{ e.preventDefault(); insCh(v); });
+    p.appendChild(k);
+  });
+  box.insertBefore(p, box.firstChild);
+  box.insertBefore(hint, box.firstChild);
+}
+function buildKbd(){
+  if(akbdBuilt) return; akbdBuilt=true;
+  const box=$('akbd'); box.innerHTML='';
+  AK_ROWS.forEach(row=>{
+    const r=document.createElement('div'); r.className='akrow';
+    row.forEach(ch=>{
+      const k=document.createElement('button'); k.type='button';
+      k.className='akey'+(AK_VARIANTS[ch]?' var':''); k.textContent=ch;
+      k.addEventListener('click', e=>{ e.preventDefault();
+        if(AK_VARIANTS[ch]) openVar(ch); else insCh(ch); });
+      r.appendChild(k);
+    });
+    box.appendChild(r);
+  });
+  const ar=document.createElement('div'); ar.className='akrow';
+  const sp=document.createElement('button'); sp.type='button'; sp.className='akey wide act'; sp.textContent='space';
+  sp.addEventListener('click', e=>{ e.preventDefault(); insCh(' '); });
+  const bs=document.createElement('button'); bs.type='button'; bs.className='akey act';
+  bs.textContent='⌫ back'; bs.addEventListener('click', e=>{ e.preventDefault(); backspace(); });
+  ar.appendChild(sp); ar.appendChild(bs);
+  box.appendChild(ar);
+}
+function toggleKbd(){
+  const box=$('akbd');
+  if(box.hidden){ buildKbd(); box.hidden=false; $('qkbd').classList.add('on');
+    try{ $('q').blur(); }catch(e){} }        // avoid the device keyboard fighting it
+  else { box.hidden=true; closeVar(); $('qkbd').classList.remove('on'); }
+}
+// Voice (Arabic) — fills the box only, never auto-searches.
+let recog = null, recstate = false;
+function voiceSearch(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) return toast('Voice input isn\u2019t supported in this browser');
+  if(recstate){ try{ recog.stop(); }catch(e){} return; }
+  recog = new SR(); recog.lang='ar-SA'; recog.interimResults=false; recog.maxAlternatives=1;
+  recstate=true; $('qmic').classList.add('rec'); toast('Listening… recite now');
+  recog.onresult = ev=>{ $('q').value = ev.results[0][0].transcript || ''; };
+  recog.onerror = ev=>{ toast(ev.error==='not-allowed' ? 'Microphone permission needed' : 'Didn\u2019t catch that'); };
+  recog.onend = ()=>{ recstate=false; $('qmic').classList.remove('rec'); };
+  try{ recog.start(); }catch(e){ recstate=false; $('qmic').classList.remove('rec'); }
+}
+// Build a collapsed saved-item card (one line preview, expand on tap).
+function savedItemEl(ref, preview, actions, onOpen, ts){
+  const d=document.createElement('div'); d.className='sitem';
+  d.innerHTML=`<div class="sitem-head"><div class="sitem-ref"><div class="sitem-toprow"><b></b><span class="sitem-ts"></span></div><small></small></div><span class="sitem-chev">›</span></div><div class="sitem-body"><div class="vtext sitem-vtext"></div><div class="sitem-acts"></div></div>`;
+  d.querySelector('.sitem-ref b').textContent=ref;
+  d.querySelector('.sitem-ts').textContent=fmtTS(ts);
+  d.querySelector('.sitem-ref small').textContent=preview;
+  const body=d.querySelector('.sitem-body');
+  const acts=d.querySelector('.sitem-acts');
+  actions.forEach(({label,cls,fn})=>{
+    const b=document.createElement('button'); b.className='btn '+(cls||''); b.textContent=label;
+    b.onclick=e=>{ e.stopPropagation(); fn(); }; acts.appendChild(b);
+  });
+  d.querySelector('.sitem-head').onclick=()=>{ d.classList.toggle('open'); if(d.classList.contains('open')&&onOpen) onOpen(d); };
+  return d;
+}
+function renderBookmarks(){
+  const box=$('bookmarks');
+  if(!BOOKMARKS.length){ box.innerHTML='<div class="empty">No bookmarks yet. Tap 🔖 on any ayah while reading.</div>'; return; }
+  box.innerHTML='';
+  BOOKMARKS.slice().sort(byNewest).forEach(b=>{
+    const preview=b.text?b.text.slice(0,40)+'…':'';
+    const d=savedItemEl(verseRef(b.s,b.a), preview, [
+      {label:'Go to',cls:'pri',fn:()=>{ tab('rd'); openInContext(b.s,b.a,b.text,''); }},
+      {label:'Copy',fn:()=>copyText(verseCopy(b.s,b.a,b.text),'Copied')},
+      {label:'Remove',cls:'dgr',fn:()=>{ BOOKMARKS.splice(BOOKMARKS.indexOf(b),1); saveBK(); renderBookmarks(); }}
+    ], el=>{ el.querySelector('.sitem-vtext').textContent=b.text;
+             document.documentElement.style.setProperty('--asz',S.asz+'px'); }, b.ts);
+    box.appendChild(d);
+  });
+}
+function renderVerses(){
+  const box=$('verses');
+  if(!VERSES.length){ box.innerHTML='<div class="empty">No saved verses yet. Find some in the Read tab and tap Save.</div>'; return; }
+  box.innerHTML='';
+  VERSES.slice().sort(byNewest).forEach(v=>{
+    const preview=v.text?v.text.slice(0,40)+'…':'';
+    const d=savedItemEl(verseRef(v.s,v.a), preview, [
+      {label:'Drill',cls:'pri',fn:()=>drillVerse(v)},
+      {label:'Read',fn:()=>{ tab('rd'); openInContext(v.s,v.a,v.text,''); }},
+      {label:'Copy',fn:()=>copyText(verseCopy(v.s,v.a,v.text),'Copied')},
+      {label:'Remove',cls:'dgr',fn:()=>{ VERSES.splice(VERSES.indexOf(v),1); saveV(); renderVerses(); }}
+    ], el=>{ el.querySelector('.sitem-vtext').textContent=v.text;
+             document.documentElement.style.setProperty('--asz',S.asz+'px'); }, v.ts);
+    box.appendChild(d);
+  });
+}
+// Send a saved verse straight into the drill setup.
+async function drillVerse(v){
+  $('surah').value = v.s;
+  fillAyat($('surah'),$('from'),$('to'), v.a, v.a);
+  try{ await loadSurah(v.s); }catch(e){}
+  sync(); budget();
+  tab('sel');
+  toast(`${verseRef(v.s,v.a)} loaded — set repeats and Start`);
+}
+
+function boot(){
+  document.querySelectorAll('#nav button').forEach(b=> b.onclick = ()=>tab(b.dataset.tab));
+  $('pback').onclick = ()=>tab(playerBack);
+  $('gback').onclick = ()=>tab('more');
+  $('savback').onclick = ()=>tab('more');
+  $('setback').onclick = ()=>tab('more');
+  $('openguide').onclick = ()=>tab('gde');
+  $('goSaved').onclick = ()=>tab('sav');
+  $('goSettings').onclick = ()=>tab('set');
+  $('goGuide').onclick = ()=>tab('gde');
+  $('appCopy').onclick = ()=>copyText(APP_URL, 'Link copied');
+  $('appShare').onclick = ()=>copyText(
+    `Hifz — Stacked Memorizer\nA Qur\u2019an memorization app with stitched audio export.\n${APP_URL}`,
+    'Copied — paste it anywhere');
+  // Read + search
+  // search pill expand/collapse/reset
+  function expandSearch(){ $('searchwrap').classList.remove('collapsed'); $('q').focus(); }
+  function collapseSearch(){ $('searchwrap').classList.add('collapsed'); $('akbd').hidden=true; $('qkbd').classList.remove('on'); }
+  function resetSearch(){ $('q').value=''; lastQuery=''; collapseSearch();
+    $('rd-results').hidden=true; $('rd-ctx').hidden=true; $('rd-browse').hidden=false;
+    $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true; }
+  $('searchpill').onclick  = expandSearch;
+  $('qcollapse').onclick   = collapseSearch;
+  $('qreset').onclick      = resetSearch;
+  $('q').onfocus = ()=> $('searchwrap').classList.remove('collapsed');
+  // continue reading chip
+  $('continuebtn').onclick = ()=>{ if(LASTREAD){
+    const arr=TEXT[LASTREAD.s]||[]; const ay=arr.find(a=>a.n===LASTREAD.a);
+    openInContext(LASTREAD.s,LASTREAD.a,ay?.text||'',''); }};
+  // now-playing bar
+  $('nbstop').onclick = e=>{ e.stopPropagation(); stopAyahPlayer(); };
+  $('nowbar').onclick = ()=>{ if(autoSurah&&autoAyah) scrollToAyah(autoSurah,autoAyah,false); };
+  // detect manual scroll to pause auto-scroll
+  document.querySelector('main').addEventListener('scroll', onUserScroll, {passive:true});
+  // version in header
+  if($('hdrver')) $('hdrver').textContent=VERSION;
+  // ctx back
+  $('ctxback').onclick = ()=>{
+    $('rd-ctx').hidden=true; $('rd-results').hidden=false;
+    $('p-rd').classList.remove('ctx-open'); $('ctxbar').hidden=true;
+    document.querySelector('main').scrollTop=0;
+  };
+  $('qsearch').onclick = runSearch;
+  $('qclear').onclick  = clearSearch;
+  $('qmic').onclick    = voiceSearch;
+  $('qkbd').onclick    = toggleKbd;
+  $('qconv').onclick = ()=>{ const v=$('q').value.trim();
+    if(!/[a-z]/i.test(v)) return toast('Type Latin letters to convert (e.g. rahman)');
+    $('q').value = translitToArabic(v); toast('Converted — check it, then Search'); };
+  $('q').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); runSearch(); } });
+  $('rdsurah').onchange = async ()=>{
+    if(!$('rdsurah').value){ clearReadView(); return; }   // the placeholder itself
+    const ph = $('rdsurah').querySelector('option[value=""]'); if(ph) ph.remove();
+    const n=+$('rdsurah').value;
+    try{ await loadSurah(n); }catch(e){} renderReadSurah(n);
+  };
+  $('rdclear').onclick = clearReadView;
+  let rdtimer;
+  $('rdfilter').oninput = ()=>{ clearTimeout(rdtimer); rdtimer=setTimeout(()=>{
+    const hits = searchSurah($('rdfilter').value);
+    if(hits.length){ $('rdsurah').value=hits[0]; $('rdsurah').onchange(); }
+  },160); };
+  document.querySelectorAll('[data-step]').forEach(b=> b.onclick = ()=>{
+    const i=$(b.dataset.t);
+    i.value = Math.max(+i.min, Math.min(+i.max, +i.value + (+b.dataset.step)));
+    if(b.dataset.t==='sfrom' || b.dataset.t==='sto'){
+      if(+$('sto').value < +$('sfrom').value){
+        if(b.dataset.t==='sfrom') $('sto').value=$('sfrom').value; else $('sfrom').value=$('sto').value;
+      }
+      sreadout();
+    } else sync();
+  });
+  $('rep').oninput=sync; $('rng').oninput=sync; $('sd').oninput=sync;
+  $('from').onchange=sync; $('to').onchange=sync;
+  $('surah').onchange = async ()=>{
+    const s=SURAHS.find(x=>x.n===+$('surah').value);
+    fillAyat($('surah'),$('from'),$('to'),1,Math.min(7,s.count));
+    sync(); try{ await loadSurah(+$('surah').value); }catch(e){} budget();
+  };
+  let ftimer;
+  $('sfilter').oninput = ()=>{ clearTimeout(ftimer); ftimer=setTimeout(applyFilter,140); };
+  $('sfilter').onsearch = applyFilter;   // fires on the clear (×) button too
+  $('sfilter').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('sfilter').blur(); } });
+  $('preview').onclick = preview;
+  $('go').onclick=begin; $('save').onclick=saveRange; $('clr').onclick=clearRange;
+
+  $('play').onclick = ()=>{
+    if(preparing) return;
+    if(!PARTS.length) return toast('Build something first');
+    if(el && !el.paused) el.pause(); else ensureEl().play().catch(()=>toast('Tap once more to allow audio'));
+  };
+  $('stop').onclick=stop; $('prev').onclick=()=>jump(-1); $('next').onclick=()=>jump(1);
+  $('newsess').onclick = newSession;
+  // Tapping a number box selects its whole value so typing replaces it cleanly.
+  ['from','to','sfrom','sto'].forEach(id=>{
+    const el2=$(id);
+    const sel=()=>{ try{ el2.select(); }catch(e){} };
+    el2.addEventListener('focus', ()=>setTimeout(sel,0));
+    el2.addEventListener('click', sel);
+  });
+  $('prog').onclick = e =>{ if(!TOTAL) return;
+    const r=e.currentTarget.getBoundingClientRect();
+    seekTo(((e.clientX-r.left)/r.width)*TOTAL); };
+  $('explisten').onclick = ()=>exportAudio(false);   // plain MP3
+  $('expmusi').onclick   = ()=>exportAudio(true);    // MP3 + embedded verses + .lrc
+  $('copyallbtn').onclick = copyAllVerses;
+  $('logcopy').onclick = ()=>{
+    const text = logRows.join('\n') + `\nHifz ${VERSION} · ${BUILD}\n${navigator.userAgent}`;
+    copyText(text, 'Activity log copied');
+  };
+
+  // stitch
+  let ssftimer;
+  $('ssfilter').oninput = ()=>{ clearTimeout(ssftimer); ssftimer=setTimeout(applySSFilter,140); };
+  $('ssfilter').onsearch = applySSFilter;   // fires on the clear (×) button too
+  $('ssfilter').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); $('ssfilter').blur(); } });
+  $('ssurah').onchange = async ()=>{
+    const s=SURAHS.find(x=>x.n===+$('ssurah').value);
+    fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,s.count));
+    try{ await loadSurah(+$('ssurah').value); }catch(e){} sreadout();
+  };
+  $('sfrom').onchange = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sto').value=$('sfrom').value; };
+  $('sto').onchange   = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sfrom').value=$('sto').value; };
+  $('spreview').onclick = stitchPreview;
+  $('sadd').onclick   = addBlock;
+  $('sprevall').onclick = stitchPreviewAll;
+  $('sbuild').onclick = ()=>buildStitch(true);
+  $('sexp').onclick   = ()=>buildStitch(false);
+  $('srecipe').onclick= saveRecipe;
+  $('sclearb').onclick= ()=>{ if(!BLOCKS.length) return;
+    if(!confirm('Remove all blocks?')) return; BLOCKS=[]; saveB(); renderBlocks(); };
+
+  // settings
+  $('qari').innerHTML = RECITERS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+  const qh = ()=> $('qhint').textContent = bps()===192
+    ? 'Abdul Basit is 192 kbps — files run about 50% larger than the others, roughly 1.5 MB per minute.'
+    : 'Roughly 1 MB per minute at 128 kbps.';
+  $('qari').onchange = ()=>{ S.qari=$('qari').value; saveS(); qh(); budget(); sreadout(); cacheInfo(); toast('Reciter changed'); };
+  $('gap').oninput = ()=>{ S.gap=+$('gap').value; $('gaplbl').textContent=S.gap.toFixed(1)+'s'; saveS(); budget(); };
+  $('asz').oninput = ()=>{ S.asz=+$('asz').value; $('aszlbl').textContent=S.asz+'px';
+    document.documentElement.style.setProperty('--asz',S.asz+'px'); saveS(); };
+  $('uisz').oninput = ()=>{ S.uisz=+$('uisz').value; $('uiszlbl').textContent=S.uisz+'px';
+    document.documentElement.style.setProperty('--uisz',S.uisz+'px'); saveS(); };
+  document.querySelectorAll('#gapmode button').forEach(b=> b.onclick = ()=>{
+    S.gapmode=b.dataset.v; saveS(); paintGapModes(); budget(); });
+  toggle($('t-hl'),'hl',    ()=> paint(SEG[segI]||null));
+  toggle($('t-veil'),'veil',()=> paint(SEG[segI]||null));
+  toggle($('t-bism'),'bism',budget);
+  toggle($('t-wake'),'wake',()=>{ if(!S.wake) relWake(); else if(el&&!el.paused) reqWake(); });
+  toggle($('t-lyrics'),'lyrics');
+
+  $('exp').onclick = exportBackup;
+  $('imp').onclick = ()=> $('impf').click();
+  $('impf').onchange = e =>{ if(e.target.files[0]) importBackup(e.target.files[0]); e.target.value=''; };
+  $('clra').onclick = async ()=>{ if(!confirm('Delete downloaded audio? Text and settings stay.')) return;
+    try{ await DB.clear('audio'); toast('Audio cleared'); }catch(e){ toast('Storage unavailable'); }
+    cacheInfo(); };
+  $('reset').onclick = resetAll;
+  $('rediag').onclick = diagnose;
+
+  $('ver').textContent = `Hifz ${VERSION} · built ${BUILD}`;
+  qh();
+  const net = ()=> $('netdot').classList.toggle('off', !navigator.onLine);
+  addEventListener('online',net); addEventListener('offline',net); net();
+}
+
+/* ---------------------------------------------------- app auto-update (SW) */
+// A separate sw.js caches the app for offline use and serves the freshest
+// index.html when online. This code compares the running VERSION against the
+// version currently published; if newer, it surfaces a gentle banner (once per
+// session) plus a persistent row + dot in Settings. Reloading is deferred while
+// audio is playing so a recitation is never interrupted.
+let updateReady = false, pendingReload = false, updBusy = false;
+function showUpdateUI(){
+  updateReady = true;
+  $('updrow').hidden = false;
+  $('setpip').hidden = false;
+  if(!sessionStorage.getItem('hifz.updDismissed')) $('updbar').hidden = false;
+}
+// Nuclear-but-reliable refresh: drop every cache, unregister the service
+// worker, then navigate fresh. Guarantees the newest files load even if an old
+// worker was stubbornly serving stale content.
+async function hardRefresh(){
+  if(updBusy) return; updBusy = true; toast('Updating…');
+  try{ const ks = await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }catch(e){}
+  try{ const regs = await navigator.serviceWorker.getRegistrations();
+       await Promise.all(regs.map(r=>r.unregister())); }catch(e){}
+  const base = location.href.split('#')[0].split('?')[0];
+  setTimeout(()=> location.replace(base + '?u=' + Date.now()), 200);
+}
+async function applyUpdate(){
+  if(updBusy) return;
+  if(el && !el.paused){          // never reload mid-recitation
+    pendingReload = true; $('updbar').hidden = true;
+    return toast('Update will apply when playback stops');
+  }
+  // Re-verify before acting, so a stale flag can't leave a dead button.
+  toast('Checking…');
+  await checkForUpdate(true);
+  if(!updateReady) return toast('You\u2019re on the latest version (' + VERSION + ')');
+  hardRefresh();
+}
+async function checkForUpdate(force){
+  if(updateReady && !force) return;
+  try{
+    // Compare the RUNNING page against a fresh copy of *itself*, cache-busted so
+    // neither the HTTP cache nor the service worker can serve a stale copy.
+    const base = location.href.split('#')[0].split('?')[0];
+    const res = await fetch(base + '?_=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) return;
+    const txt = await res.text();
+    const m = txt.match(/const VERSION = '(v[^']+)'/);
+    if(m && m[1] !== VERSION) showUpdateUI();
+    else if(force){ updateReady=false; $('updrow').hidden=true; $('setpip').hidden=true; $('updbar').hidden=true; }
+  }catch(e){/* offline or blocked — ignore */}
+}
+function initUpdates(){
+  $('updbtn').onclick = applyUpdate;
+  $('updrow').onclick = applyUpdate;
+  $('upddismiss').onclick = ()=>{ $('updbar').hidden = true;
+    try{ sessionStorage.setItem('hifz.updDismissed','1'); }catch(e){} };
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    checkForUpdate();
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.visibilityState==='visible') checkForUpdate(); });
+    setInterval(checkForUpdate, 30*60*1000);
+  }
+}
+
+(async function init(){
+  SIL = {128:b64ToU8(SIL_B64[128]), 192:b64ToU8(SIL_B64[192])};
+  boot(); applySettings(); initUpdates();
+  try{
+    await loadSurahs(); await loadBismillah();
+    $('aszdemo').textContent = BISM;
+    fillSurahSelect($('surah')); fillSurahSelect($('ssurah'));
+    $('surah').value = S.surah;
+    fillAyat($('surah'),$('from'),$('to'),S.from,S.to);
+    $('ssurah').value = S.surah;
+    const cs = (SURAHS.find(x=>x.n===S.surah)||{count:7}).count;
+    fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,cs));
+    sync();
+    try{ await loadSurah(S.surah); }catch(e){}
+    for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
+    budget(); renderBlocks();
+    // Read is the default tab — init it now that SURAHS are loaded
+    ensureReadTab(); updateContinueChip();
+  }catch(e){
+    $('surah').innerHTML = '<option>Could not load</option>';
+    $('bnote').textContent = 'Could not reach the text source. Connect once, then it works offline.';
+  }
+})();
+</script>
+</body>
+</html>
