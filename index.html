@@ -554,7 +554,8 @@ h2:first-child{margin-top:0}
     <button class="btn" id="sprevall">Preview all text</button>
   </div>
 
-  <div class="row" style="margin-top:14px">
+  <div class="sw" style="margin-top:14px"><div><b>Save each block as its own file</b><p>Off: one continuous track. On: one MP3 per block (each opens with its own Bismillah), zipped together.</p></div><button class="tog" id="t-sep" role="switch"></button></div>
+  <div class="row" style="margin-top:10px">
     <button class="btn pri" id="sbuild">Build &amp; play</button>
     <button class="btn" id="sexp">Build &amp; save MP3</button>
   </div>
@@ -720,6 +721,7 @@ h2:first-child{margin-top:0}
 
     <h3>Stitch tab</h3>
     <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and every block opens with a Bismillah — even two back-to-back blocks in the same surah, and even a block from Surah 9 (which has no Bismillah of its own; here it's just a marker, not a recitation) — so a listener always hears where one block ends and the next begins, whether played straight through or saved separately. The one exception is a block starting at Al-Fātiḥah 1:1, since that ayah already is the Bismillah. Good for revision or just listening.</p>
+    <p><b>Save each block as its own file</b> switches what <b>Build &amp; save MP3</b> produces: instead of one continuous track, every block is saved as its own standalone MP3 (still opening with its own Bismillah), all zipped together. <b>Build &amp; play</b> always plays the continuous version either way.</p>
 
     <h3>Saving to your phone or PC's player</h3>
     <p>After a track is built, two buttons appear:</p>
@@ -804,8 +806,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v34';
-const BUILD   = '2026-10-23 07:04 UTC';
+const VERSION = 'v35';
+const BUILD   = '2026-10-23 08:02 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -815,7 +817,7 @@ const RECITERS = [
 ];
 const API = 'https://api.alquran.cloud/v1';
 const AUD = 'https://everyayah.com/data';
-const WARN_MB = 25, MAX_MB = 60, PART_MB = 22;
+const WARN_MB = 25, MAX_MB = 60, PART_MB = 22, SEP_MAX_MB = 150;
 
 // Digital-silence MPEG1 Layer III frames, 44.1kHz stereo. 1152 samples =
 // 26.122ms each; repeat one to build a gap of any length.
@@ -842,7 +844,7 @@ const ascii = s => s.replace(/[^\x20-\x7E]/g,'').replace(/[\/\\:*?"<>|]/g,'-').r
 
 const DEF = {qari:'Alafasy_128kbps', gap:1, gapmode:'fixed', hl:true, veil:false, bism:false,
              wake:false, asz:34, uisz:19, rep:3, rng:5, sd:20, surah:1, from:1, to:7,
-             sgap:1, sgapmode:'none', lyrics:true};
+             sgap:1, sgapmode:'none', lyrics:true, sep:false};
 const LS = {
   get(k,d){ try{ const v=localStorage.getItem('hifz.'+k); return v==null ? d : JSON.parse(v); }catch(e){ return d; } },
   set(k,v){ try{ localStorage.setItem('hifz.'+k, JSON.stringify(v)); }catch(e){} }
@@ -1536,6 +1538,41 @@ async function exportAudio(withLyrics){
   btns.forEach(b=>{ if(b) b.disabled=false; });
   if(busy) busy.textContent=busyLabel;
 }
+// Stitch's "save each block separately" path: build each block on its own
+// (own Bismillah, own lyrics/.lrc/.srt — same rules as the combined export),
+// then zip every block's files together under the same name the combined
+// export would have used. Errors bubble up to buildStitch's own try/catch.
+async function exportSeparateBlocks(){
+  const artist = (RECITERS.find(r=>r.id===S.qari)||{}).name||'';
+  const withLrc = S.lyrics;
+  const files = [];
+  for(let bi=0; bi<BLOCKS.length; bi++){
+    const b = BLOCKS[bi];
+    logLine(`Block ${bi+1} of ${BLOCKS.length} — ${sName(b.surah)} ${b.from}-${b.to}`, 'in');
+    const r = await stitch(stitchItems([b]), ()=>0, prog);
+    PARTS=r.parts; SEG=r.seg; TOTAL=r.total;   // buildLRC/buildSRT read these globals
+    const base = blockLabel(b);
+    for(let i=0;i<PARTS.length;i++){
+      const title = ascii(PARTS.length>1 ? `${base} part ${i+1} of ${PARTS.length}` : base);
+      const lrc = withLrc ? buildLRC(i, title) : null;
+      const srt = withLrc ? buildSRT(i) : null;
+      const tag = id3(title, artist, 'Hifz', lrc);
+      const body = new Uint8Array(await PARTS[i].blob.arrayBuffer());
+      const u8 = new Uint8Array(tag.length + body.length);
+      u8.set(tag,0); u8.set(body,tag.length);
+      files.push({name:`${title}.mp3`, u8});
+      if(lrc) files.push({name:`${title}.lrc`, u8:new TextEncoder().encode(lrc)});
+      if(srt) files.push({name:`${title}.srt`, u8:new TextEncoder().encode(srt)});
+    }
+    logProgDone(`Block ${bi+1} of ${BLOCKS.length} ready`);
+  }
+  const zipBase = ascii(LABEL) || 'Hifz blocks';
+  saveBlob(makeZip(files), `${zipBase}.zip`);
+  const mp3s = files.filter(f=>f.name.endsWith('.mp3')).length;
+  logLine(`Saved ${zipBase}.zip — ${mp3s} file${mp3s>1?'s':''}${withLrc?' + lyrics':''}`, 'ok');
+  toast(withLrc ? '✓ Saved zip in Downloads — extract it, then open the folder in Musicolet'
+                : `✓ Saved zip of ${mp3s} files in Downloads`);
+}
 
 /* ------------------------------------------------------- drill setup tab */
 const depthVal = () => Math.max(1, +$('sd').value || 1);
@@ -1829,23 +1866,28 @@ const blockAyat = b => b.to - b.from + 1;
 // Al-Fātiḥah 1:1 — that ayah already IS the Bismillah, so adding another
 // would just repeat it.
 const blockOpensWithBismillah = b => !(b.surah===1 && b.from===1);
-function stitchItems(){
+// Both take an optional block list so a single block can be built on its own
+// (separate-file export) without touching the global BLOCKS/multi-block path.
+function stitchItems(blocks=BLOCKS){
   const items = [];
-  BLOCKS.forEach(b=>{
+  blocks.forEach(b=>{
     if(blockOpensWithBismillah(b))
       items.push({s:1, a:1, meta:{k:'listen', bism:true}});
     for(let i=b.from;i<=b.to;i++) items.push({s:b.surah, a:i, meta:{k:'listen'}});
   });
   return items;
 }
-function stitchView(){
+function stitchView(blocks=BLOCKS){
   const v = [];
-  BLOCKS.forEach(b=>{
+  blocks.forEach(b=>{
     const brk = blockOpensWithBismillah(b);
     for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i, brk: brk && i===b.from});
   });
   return v;
 }
+// A block is always a single surah, so it always gets the same numbered
+// naming as any other single-surah export.
+const blockLabel = b => `${sNum(b.surah)} ${sName(b.surah)} ${b.from}-${b.to}`;
 function renderBlocks(){
   const box = $('blocks');
   if(!BLOCKS.length){
@@ -1865,28 +1907,52 @@ function renderBlocks(){
 }
 function sreadout(){
   const m=$('smain'), note=$('snote'), r=$('sreadout');
-  const on = v => { $('sbuild').disabled=!v; $('sexp').disabled=!v; $('sprevall').disabled=!v; };
-  if(!BLOCKS.length){ m.textContent='No blocks yet'; note.textContent=''; r.className='readout'; on(false); return; }
+  if(!BLOCKS.length){ m.textContent='No blocks yet'; note.textContent=''; r.className='readout';
+    $('sbuild').disabled=true; $('sexp').disabled=true; $('sprevall').disabled=true; return; }
   const ayat = BLOCKS.reduce((a,b)=>a+blockAyat(b),0);
   let secs=0, known=true;
+  const blockMB=[];
   BLOCKS.forEach(b=>{
     const A = TEXT[b.surah];
-    if(!A){ known=false; return; }
-    for(let i=b.from;i<=b.to;i++) secs += estAyah(A[i-1].text, b.surah, i) + stitchGap();
+    if(!A){ known=false; blockMB.push(0); return; }
+    let bs=0; for(let i=b.from;i<=b.to;i++) bs += estAyah(A[i-1].text, b.surah, i) + stitchGap();
+    secs += bs; blockMB.push(toMB(bs));
   });
   if(!known){
     m.textContent = `${BLOCKS.length} block${BLOCKS.length>1?'s':''} · ${ayat} ayat`;
     note.textContent = 'Size appears once every surah\u2019s text has loaded.';
-    r.className='readout'; on(true); return;
+    r.className='readout';
+    $('sbuild').disabled=false; $('sexp').disabled=false; $('sprevall').disabled=false; return;
   }
   const mb = toMB(secs);
   m.textContent = `${BLOCKS.length} block${BLOCKS.length>1?'s':''} · ${ayat} ayat · ≈ ${mmss(secs)} · ≈ ${mb.toFixed(0)} MB`;
-  if(mb > MAX_MB){ r.className='readout bad'; on(false);
-    note.textContent = `Too long — limit is ${MAX_MB} MB. Remove a block.`; }
-  else if(mb > WARN_MB){ r.className='readout warn'; on(true);
-    note.textContent = `Long — saves as a zip of ${Math.ceil(mb/PART_MB)} files, and playback may pause at a part boundary if the screen is locked.`; }
-  else { r.className='readout ok'; on(true);
-    note.textContent = 'Plays as one track — safe to lock the screen.'; }
+  const combinedOK = mb <= MAX_MB;
+  $('sprevall').disabled = false;
+  $('sbuild').disabled = !combinedOK;   // Build & play always merges into one track
+  const sep = S.sep && BLOCKS.length>1;
+  if(!sep){
+    $('sexp').disabled = !combinedOK;
+    if(mb > MAX_MB){ r.className='readout bad';
+      note.textContent = `Too long — limit is ${MAX_MB} MB. Remove a block.`; }
+    else if(mb > WARN_MB){ r.className='readout warn';
+      note.textContent = `Long — saves as a zip of ${Math.ceil(mb/PART_MB)} files, and playback may pause at a part boundary if the screen is locked.`; }
+    else { r.className='readout ok';
+      note.textContent = 'Plays as one track — safe to lock the screen.'; }
+    return;
+  }
+  // Separate-files mode: each block checked on its own against the normal
+  // limits; the zip's total checked against its own, more generous ceiling —
+  // several small valid files add up differently than one unplayable track.
+  const worst = Math.max(...blockMB);
+  const playNote = combinedOK ? '' : ' Combined track is too long to play as one, so Build & play is off.';
+  if(worst > MAX_MB){ r.className='readout bad'; $('sexp').disabled=true;
+    note.textContent = `One block alone is over ${MAX_MB} MB — shorten or remove it.`+playNote; }
+  else if(mb > SEP_MAX_MB){ r.className='readout bad'; $('sexp').disabled=true;
+    note.textContent = `Zip total is over ${SEP_MAX_MB} MB combined — remove a block.`+playNote; }
+  else if(worst > WARN_MB){ r.className='readout warn'; $('sexp').disabled=false;
+    note.textContent = `Saves as ${BLOCKS.length} separate files in one zip — one block alone is long enough to split into parts.`+playNote; }
+  else { r.className='readout ok'; $('sexp').disabled=false;
+    note.textContent = `Saves as ${BLOCKS.length} separate files in one zip.`+playNote; }
 }
 async function addBlock(){
   const b = {surah:+$('ssurah').value, from:+$('sfrom').value, to:+$('sto').value};
@@ -1917,21 +1983,29 @@ async function buildStitch(andPlay){
     logLine('Text ready', 'ok');
     VIEW = stitchView(); renderView();
     ensureEl();   // see note in begin() — never await a source-less play()
-    const items = stitchItems();
-    const uniq = new Set(items.map(x=>x.s+':'+x.a)).size;
-    logLine(`Gathering ${uniq} ayah file${uniq>1?'s':''}`, 'in');
     DL = {cache:0, net:0};
-    const gap = stitchGap() * 1000;
-    const r = await stitch(items, ()=>gap, prog);
-    logProgDone(`Audio ready — ${DL.cache} saved, ${DL.net} downloaded`);
-    logLine('Stitching into one track…', 'in');
-    $('pos').textContent='Stitching…';
-    PARTS=r.parts; SEG=r.seg; TOTAL=r.total; prepEnd();
-    const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
-    logLine(`Built ${mmss(TOTAL)} · ${mb.toFixed(1)} MB · ${PARTS.length} part${PARTS.length>1?'s':''}`, 'ok');
-    loadPart(0); media(); segI=-1; tick(); showExport();
-    if(andPlay) await startOrArm();
-    else { exportAudio(); logLine('Saving file…', 'ok'); }
+
+    if(!andPlay && S.sep && BLOCKS.length>1){
+      // Each block saved as its own file, zipped together — never for
+      // Build & play, which always merges into one continuous track.
+      await exportSeparateBlocks();
+      prepEnd();
+    } else {
+      const items = stitchItems();
+      const uniq = new Set(items.map(x=>x.s+':'+x.a)).size;
+      logLine(`Gathering ${uniq} ayah file${uniq>1?'s':''}`, 'in');
+      const gap = stitchGap() * 1000;
+      const r = await stitch(items, ()=>gap, prog);
+      logProgDone(`Audio ready — ${DL.cache} saved, ${DL.net} downloaded`);
+      logLine('Stitching into one track…', 'in');
+      $('pos').textContent='Stitching…';
+      PARTS=r.parts; SEG=r.seg; TOTAL=r.total; prepEnd();
+      const mb = PARTS.reduce((a,p)=>a+p.blob.size,0)/1048576;
+      logLine(`Built ${mmss(TOTAL)} · ${mb.toFixed(1)} MB · ${PARTS.length} part${PARTS.length>1?'s':''}`, 'ok');
+      loadPart(0); media(); segI=-1; tick(); showExport();
+      if(andPlay) await startOrArm();
+      else { exportAudio(); logLine('Saving file…', 'ok'); }
+    }
   }catch(e){
     prepEnd(); $('phase').textContent='Ready'; $('phase').className=''; $('pos').textContent='';
     logError(e);
@@ -2164,7 +2238,7 @@ function applySettings(){
   document.documentElement.style.setProperty('--uisz', S.uisz+'px');
   $('rep').value = S.rep; $('rng').value = S.rng; $('sd').value = S.sd;
   document.documentElement.style.setProperty('--asz', S.asz+'px');
-  ['hl','veil','bism','wake','lyrics'].forEach(k=>{
+  ['hl','veil','bism','wake','lyrics','sep'].forEach(k=>{
     const n=$('t-'+k); if(n) n.setAttribute('aria-checked', String(!!S[k])); });
   paintGapModes();
 }
@@ -2908,6 +2982,7 @@ function boot(){
   toggle($('t-bism'),'bism',budget);
   toggle($('t-wake'),'wake',()=>{ if(!S.wake) relWake(); else if(el&&!el.paused) reqWake(); });
   toggle($('t-lyrics'),'lyrics');
+  toggle($('t-sep'),'sep', sreadout);
 
   $('exp').onclick = exportBackup;
   $('imp').onclick = ()=> $('impf').click();
