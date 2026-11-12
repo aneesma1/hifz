@@ -723,6 +723,9 @@ h2:first-child{margin-top:0}
     <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and every block opens with a Bismillah — even two back-to-back blocks in the same surah, and even a block from Surah 9 (which has no Bismillah of its own; here it's just a marker, not a recitation) — so a listener always hears where one block ends and the next begins, whether played straight through or saved separately. The one exception is a block starting at Al-Fātiḥah 1:1, since that ayah already is the Bismillah. Good for revision or just listening.</p>
     <p><b>Save each block as its own file</b> switches what <b>Build &amp; save MP3</b> produces: instead of one continuous track, every block is saved as its own standalone MP3 (still opening with its own Bismillah), all zipped together. <b>Build &amp; play</b> always plays the continuous version either way.</p>
 
+    <h3>Copying verses</h3>
+    <p>Every <b>Copy</b> button in the app — a single ayah, "Copy all verses," Read tab, search, saved verses, bookmarks — uses the same format: a header (surah number, name, then "Ayah N" or "Ayat N–M"), then the ayah text. In Stitch, each block gets its own header and its own Bismillah, matching the audio exactly. Pasting into Word (or any rich-text app) keeps the header bold and the Arabic right-to-left, and pairs the header with its Bismillah on one line to save paper on a long export; pasting into Notepad or a plain editor gets the same content as clean plain text, header and Bismillah on their own lines — one copy works for both.</p>
+
     <h3>Saving to your phone or PC's player</h3>
     <p>After a track is built, two buttons appear:</p>
     <ul>
@@ -734,9 +737,6 @@ h2:first-child{margin-top:0}
     <p>The verses ride inside the MP3, so even without the <code>.lrc</code> a player that reads embedded lyrics will show them. The <code>.lrc</code> is there as a reliable fallback.</p>
     <h4>Watching verses on a PC</h4>
     <p>Windows Media Player and Media Player Classic won't show any of this — they don't read embedded lyrics or <code>.lrc</code>/<code>.srt</code> files. <b>VLC</b> can, using the <code>.srt</code>: extract the zip so the <code>.srt</code> sits next to its matching <code>.mp3</code> in the same folder (same file name — VLC pairs them automatically), then turn on <b>Audio ▸ Visualizations</b> before playing. VLC only draws subtitles onto a visual surface, so without a visualization running there's nowhere for the verse to appear even with the file in place.</p>
-
-    <h3>Copying verses</h3>
-    <p>On the reading screen, each ayah has a small <b>copy</b> button, and <b>Copy all verses</b> copies the whole passage (with verse numbers) as Arabic text.</p>
 
     <h3>Settings worth knowing</h3>
     <ul>
@@ -806,8 +806,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v35';
-const BUILD   = '2026-10-23 08:02 UTC';
+const VERSION = 'v38';
+const BUILD   = '2026-11-12 03:56 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -960,16 +960,84 @@ function copyText(text, okMsg){
     navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text,done));
   else fallbackCopy(text, done);
 }
-// All verses currently shown, Arabic + verse numbers, unique ayat in order.
+// Copies a plain-text version AND an HTML version in one go. A rich target
+// (Word, a rich-text editor) reads the HTML and pastes it formatted — bold
+// header, right-to-left Arabic; Notepad and other plain editors don't
+// understand HTML, so they silently fall back to the plain-text version
+// instead. Nothing extra is needed per destination app — the OS clipboard
+// already resolves it. Unsupported browsers fall back to copyText() itself.
+function copyRich(plain, html, okMsg){
+  if(navigator.clipboard && window.ClipboardItem){
+    const item = new ClipboardItem({
+      'text/plain': new Blob([plain], {type:'text/plain'}),
+      'text/html':  new Blob([html],  {type:'text/html'})
+    });
+    navigator.clipboard.write([item]).then(()=>toast(okMsg||'Copied')).catch(()=>copyText(plain, okMsg));
+  } else copyText(plain, okMsg);
+}
+const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// One header format everywhere text gets copied — zero-padded surah number
+// (matching the filenames), name, then "Ayah N" for one ayah or "Ayat N–M"
+// for a range. Uses "NNN:" rather than "NNN." on purpose: a line starting
+// with digits + "." is Markdown's ordered-list marker, so a dumb/plain-text
+// Markdown parser (no HTML-aware smart paste) would swallow this header and
+// everything after it into one numbered list item. A colon triggers no such
+// rule, so the header reads safely whether it lands as plain text in a bare
+// Markdown file or as the bold line inside the rich/Word paste.
+const copyHeader = (surah, from, to=from) =>
+  `${sNum(surah)}: ${sName(surah)} — ${from===to ? `Ayah ${from}` : `Ayat ${from}–${to}`}`;
+// ﴿٢١٦﴾ ayah text — the ornate verse-number form used everywhere an ayah is
+// shown or copied, including inside the LRC/SRT exports (via segLyric).
+const ayahLine = (a, text) => `﴿${arabicNum(a)}﴾ ${text}`;
+const htmlP = (text, extra='') => `<p dir="rtl"${extra}>${escHtml(text)}</p>`;
+const htmlHeader = text => `<p><b>${escHtml(text)}</b></p>`;
+// Header and Bismillah share one printed line, to save paper on a long
+// Stitch export — name first (left-to-right), Bismillah right after it in
+// its own right-to-left span. Plain text keeps them as two separate lines
+// (see copyAllVerses) since there's no page to save there, and merging
+// English/numbers with Arabic onto one bare text line risks the browser's
+// bidi algorithm reordering them unpredictably outside a styled container.
+const htmlHeaderWithBismillah = hdr =>
+  `<p><b>${escHtml(hdr)}</b>&nbsp;&nbsp;&nbsp;&nbsp;<span dir="rtl">${escHtml(BISM)}</span></p>`;
+// Single-ayah copy — used by every per-ayah "Copy" button in the app (Read
+// tab, search results, saved verses, bookmarks, and the player views).
+function copyOneAyah(s, a, text){
+  const line = ayahLine(a, text);
+  const hdr = copyHeader(s, a);
+  copyRich(`${hdr}\n${line}`, htmlHeader(hdr)+htmlP(line), 'Ayah copied');
+}
+// Everything currently built — one header per contiguous run (a surah
+// change, or a Stitch block boundary), with a Bismillah line wherever the
+// audio would play one (v.brk) — so the copied text matches what you'd
+// actually hear, not just what's on screen.
 function copyAllVerses(){
   if(!VIEW.length) return toast('Nothing to copy yet');
-  const seen=new Set(), lines=[]; let last=null;
-  VIEW.forEach(v=>{
+  const seen=new Set();
+  const plainLines=[], htmlParts=[];
+  let last=null, count=0;
+  VIEW.forEach((v,i)=>{
     const key=v.s+':'+v.a; if(seen.has(key)) return; seen.add(key);
-    if(v.s!==last){ lines.push(`— ${sName(v.s)} —`); last=v.s; }
-    lines.push(segLyric({s:v.s,a:v.a}));
+    if(v.s!==last || v.brk){
+      let j=i, to=v.a;
+      while(j<VIEW.length && VIEW[j].s===v.s && !(j>i && VIEW[j].brk)){ to=VIEW[j].a; j++; }
+      const hdr = copyHeader(v.s, v.a, to);
+      if(plainLines.length) plainLines.push('');
+      plainLines.push(hdr);
+      if(v.brk){
+        plainLines.push(BISM);
+        htmlParts.push(htmlHeaderWithBismillah(hdr));
+      } else {
+        htmlParts.push(htmlHeader(hdr));
+      }
+      last=v.s;
+    }
+    const t=(TEXT[v.s]||[])[v.a-1];
+    const line = ayahLine(v.a, t?t.text:'');
+    plainLines.push(line);
+    htmlParts.push(htmlP(line));
+    count++;
   });
-  copyText(lines.join('\n'), `Copied ${seen.size} verse${seen.size>1?'s':''}`);
+  copyRich(plainLines.join('\n'), htmlParts.join('\n'), `Copied ${count} verse${count>1?'s':''}`);
 }
 
 /* --------------------------------------------------------------- storage */
@@ -1093,7 +1161,7 @@ const arabicNum = n => String(n).replace(/[0-9]/g, d=>'٠١٢٣٤٥٦٧٨٩'[+d]
 function segLyric(seg){
   if(seg.bism) return BISM;
   const t = (TEXT[seg.s]||[])[seg.a-1];
-  return `﴿${arabicNum(seg.a)}﴾ ${t ? t.text : ''}`;
+  return ayahLine(seg.a, t ? t.text : '');
 }
 // LRC for one part: [mm:ss.xx] per segment, timed to that part's local clock.
 function buildLRC(part, title){
@@ -1421,7 +1489,7 @@ function renderView(){
     d.innerHTML = `<span class="t"></span><span class="num">${v.a}</span><button class="cpy">Copy</button>`;
     d.querySelector('.t').textContent = t ? t.text : '…';
     d.querySelector('.cpy').onclick = (e)=>{ e.stopPropagation();
-      copyText(`${segLyric({s:v.s,a:v.a})}`, 'Ayah copied'); };
+      copyOneAyah(v.s, v.a, t ? t.text : ''); };
     box.appendChild(d);
   });
   document.documentElement.style.setProperty('--asz', S.asz+'px');
@@ -2305,7 +2373,6 @@ function searchQuran(arabicQuery){
   return hits.map(o=>o.x);
 }
 const verseRef = (s,a) => `${sName(s)} ${s}:${a}`;
-const verseCopy = (s,a,text) => `${text}\n— ${verseRef(s,a)}`;
 const isSaved = (s,a) => VERSES.some(v=>v.s===s && v.a===a);
 const isBkd   = (s,a) => BOOKMARKS.some(b=>b.s===s && b.a===a);
 function toggleBookmark(s,a,text){
@@ -2592,7 +2659,7 @@ function verseRowEl(s, a, text, showRef, query){
   const paintSv = ()=>{ const on=isSaved(s,a); svBtn.textContent=on?'Saved':'Save'; svBtn.classList.toggle('on',on); };
   const paintBk = ()=>{ bkBtn.classList.toggle('on',isBkd(s,a)); };
   paintSv(); paintBk();
-  d.querySelector('.cp').onclick = e=>{ e.stopPropagation(); copyText(verseCopy(s,a,text),'Verse copied'); };
+  d.querySelector('.cp').onclick = e=>{ e.stopPropagation(); copyOneAyah(s,a,text); };
   svBtn.onclick = e=>{ e.stopPropagation(); toggleVerse(s,a,text); paintSv(); };
   bkBtn.onclick = e=>{ e.stopPropagation(); toggleBookmark(s,a,text); paintBk();
     renderBookmarks && setTimeout(renderBookmarks,0); };
@@ -2799,7 +2866,7 @@ function renderBookmarks(){
     const preview=b.text?b.text.slice(0,40)+'…':'';
     const d=savedItemEl(verseRef(b.s,b.a), preview, [
       {label:'Go to',cls:'pri',fn:()=>{ tab('rd'); openInContext(b.s,b.a,b.text,''); }},
-      {label:'Copy',fn:()=>copyText(verseCopy(b.s,b.a,b.text),'Copied')},
+      {label:'Copy',fn:()=>copyOneAyah(b.s,b.a,b.text)},
       {label:'Remove',cls:'dgr',fn:()=>{ BOOKMARKS.splice(BOOKMARKS.indexOf(b),1); saveBK(); renderBookmarks(); }}
     ], el=>{ el.querySelector('.sitem-vtext').textContent=b.text;
              document.documentElement.style.setProperty('--asz',S.asz+'px'); }, b.ts);
@@ -2815,7 +2882,7 @@ function renderVerses(){
     const d=savedItemEl(verseRef(v.s,v.a), preview, [
       {label:'Drill',cls:'pri',fn:()=>drillVerse(v)},
       {label:'Read',fn:()=>{ tab('rd'); openInContext(v.s,v.a,v.text,''); }},
-      {label:'Copy',fn:()=>copyText(verseCopy(v.s,v.a,v.text),'Copied')},
+      {label:'Copy',fn:()=>copyOneAyah(v.s,v.a,v.text)},
       {label:'Remove',cls:'dgr',fn:()=>{ VERSES.splice(VERSES.indexOf(v),1); saveV(); renderVerses(); }}
     ], el=>{ el.querySelector('.sitem-vtext').textContent=v.text;
              document.documentElement.style.setProperty('--asz',S.asz+'px'); }, v.ts);
