@@ -463,6 +463,14 @@ h2:first-child{margin-top:0}
     </div>
     <div class="hint" id="rangehint"></div>
   </div>
+  <div class="field">
+    <label class="lbl" for="dpage">Or jump to a Mushaf page (1–604)</label>
+    <div class="row">
+      <div class="stepper" style="flex:1"><button data-step="-1" data-t="dpage">–</button><input id="dpage" type="number" inputmode="numeric" min="1" max="604" value="1"><button data-step="1" data-t="dpage">+</button></div>
+      <button class="btn" id="dpageuse">Use page</button>
+    </div>
+    <div class="hint">Only works here when the page sits inside one surah — a page spanning more than one is for Stitch instead.</div>
+  </div>
   <div class="row" style="margin-bottom:14px">
     <button class="btn" id="preview">Show text</button>
   </div>
@@ -545,6 +553,15 @@ h2:first-child{margin-top:0}
   <div class="row" style="margin-bottom:14px">
     <button class="btn" id="spreview">Show text</button>
     <button class="btn pri" id="sadd">Add block</button>
+  </div>
+
+  <div class="field">
+    <label class="lbl" for="spage">Or add a whole Mushaf page (1–604)</label>
+    <div class="row">
+      <div class="stepper" style="flex:1"><button data-step="-1" data-t="spage">–</button><input id="spage" type="number" inputmode="numeric" min="1" max="604" value="1"><button data-step="1" data-t="spage">+</button></div>
+      <button class="btn pri" id="spageadd">Add page</button>
+    </div>
+    <div class="hint">Taken exactly as it is — if it happens to hold more than one surah, each still gets its own natural Bismillah.</div>
   </div>
 
   <h2>Blocks</h2>
@@ -708,6 +725,7 @@ h2:first-child{margin-top:0}
       <li>Set the ayah range with the two boxes.</li>
       <li><b>Show text</b> loads the verses without downloading audio — check the range is right first.</li>
       <li><b>Clear</b> resets the surah, range and every repetition setting back to their defaults. Doesn't touch anything you've saved.</li>
+      <li><b>Or jump to a Mushaf page</b> fills the surah and range for you from a standard page number (1–604) — only when that page sits inside one surah. A page with more than one surah on it (common near the end of the Qur'an) needs Stitch instead.</li>
     </ul>
     <h4>Repetition</h4>
     <ul>
@@ -722,9 +740,7 @@ h2:first-child{margin-top:0}
     <h3>Stitch tab</h3>
     <p>Builds a plain listening track — each ayah once, in order, no repeats, played back to back with no gap. Add blocks (surah + range); <b>Show text</b> lets you check a block before adding it, and <b>Preview all text</b> shows everything added so far. Blocks can cross surahs, and every block opens with a Bismillah — even two back-to-back blocks in the same surah, and even a block from Surah 9 (which has no Bismillah of its own; here it's just a marker, not a recitation) — so a listener always hears where one block ends and the next begins, whether played straight through or saved separately. The one exception is a block starting at Al-Fātiḥah 1:1, since that ayah already is the Bismillah. Good for revision or just listening.</p>
     <p><b>Save each block as its own file</b> switches what <b>Build &amp; save MP3</b> produces: instead of one continuous track, every block is saved as its own standalone MP3 (still opening with its own Bismillah), all zipped together. <b>Build &amp; play</b> always plays the continuous version either way.</p>
-
-    <h3>Copying verses</h3>
-    <p>Every <b>Copy</b> button in the app — a single ayah, "Copy all verses," Read tab, search, saved verses, bookmarks — uses the same format: a header (surah number, name, then "Ayah N" or "Ayat N–M"), then the ayah text. In Stitch, each block gets its own header and its own Bismillah, matching the audio exactly. Pasting into Word (or any rich-text app) keeps the header bold and the Arabic right-to-left, and pairs the header with its Bismillah on one line to save paper on a long export; pasting into Notepad or a plain editor gets the same content as clean plain text, header and Bismillah on their own lines — one copy works for both.</p>
+    <p><b>Or add a whole Mushaf page</b> adds a standard page (1–604) as one block, taken exactly as printed — if it happens to hold more than one surah (as the last few pages do), it isn't split up; each surah inside it still gets its own natural Bismillah, same as if you'd added them separately. A page block shows a <b>View on Tanzil ↗</b> link so you can check it against the source.</p>
 
     <h3>Saving to your phone or PC's player</h3>
     <p>After a track is built, two buttons appear:</p>
@@ -737,6 +753,9 @@ h2:first-child{margin-top:0}
     <p>The verses ride inside the MP3, so even without the <code>.lrc</code> a player that reads embedded lyrics will show them. The <code>.lrc</code> is there as a reliable fallback.</p>
     <h4>Watching verses on a PC</h4>
     <p>Windows Media Player and Media Player Classic won't show any of this — they don't read embedded lyrics or <code>.lrc</code>/<code>.srt</code> files. <b>VLC</b> can, using the <code>.srt</code>: extract the zip so the <code>.srt</code> sits next to its matching <code>.mp3</code> in the same folder (same file name — VLC pairs them automatically), then turn on <b>Audio ▸ Visualizations</b> before playing. VLC only draws subtitles onto a visual surface, so without a visualization running there's nowhere for the verse to appear even with the file in place.</p>
+
+    <h3>Copying verses</h3>
+    <p>Every <b>copy</b> button — on the reading screen, in search, in Saved/Bookmarks, and <b>Copy all verses</b> in a Stitch build — copies a header (surah number, name, and ayah/ayat range) above the Arabic text. Paste into Word (or any rich editor) and the header comes through bold with the Arabic right-to-left below it; paste into Notepad or a plain editor and you get the same header and text as plain lines. Verses within one unbroken passage are joined into a single flowing paragraph, the way they sit on a Qur'an page, rather than one line per ayah; a new passage (a surah change, or a new block in a Stitch build) starts a fresh header line, with Bismillah added wherever a block begins.</p>
 
     <h3>Settings worth knowing</h3>
     <ul>
@@ -806,8 +825,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v38';
-const BUILD   = '2026-11-12 03:56 UTC';
+const VERSION = 'v40';
+const BUILD   = '2026-11-14 16:27 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1007,23 +1026,39 @@ function copyOneAyah(s, a, text){
   copyRich(`${hdr}\n${line}`, htmlHeader(hdr)+htmlP(line), 'Ayah copied');
 }
 // Everything currently built — one header per contiguous run (a surah
-// change, or a Stitch block boundary), with a Bismillah line wherever the
-// audio would play one (v.brk) — so the copied text matches what you'd
-// actually hear, not just what's on screen.
+// change, or a Stitch block boundary), with a Bismillah line wherever one
+// belongs (needsBismillah — a forced block-start, or just a natural surah
+// change, which a page block can contain) — so the copied text matches what
+// you'd actually hear, not just what's on screen. Within a run, ayat are joined
+// into one flowing paragraph (space-separated, each ending in its ﴿N﴾
+// marker) rather than one line/paragraph per ayah — matching how verses
+// actually sit on a printed Qur'an page, where only a new passage (not
+// every ayah) starts a fresh line.
 function copyAllVerses(){
   if(!VIEW.length) return toast('Nothing to copy yet');
   const seen=new Set();
   const plainLines=[], htmlParts=[];
-  let last=null, count=0;
+  let last=null, count=0, runLines=[];
+  const flushRun = () => {
+    if(!runLines.length) return;
+    const joined = runLines.join(' ');
+    plainLines.push(joined);
+    htmlParts.push(htmlP(joined));
+    runLines = [];
+  };
   VIEW.forEach((v,i)=>{
     const key=v.s+':'+v.a; if(seen.has(key)) return; seen.add(key);
     if(v.s!==last || v.brk){
+      flushRun();
       let j=i, to=v.a;
       while(j<VIEW.length && VIEW[j].s===v.s && !(j>i && VIEW[j].brk)){ to=VIEW[j].a; j++; }
       const hdr = copyHeader(v.s, v.a, to);
       if(plainLines.length) plainLines.push('');
       plainLines.push(hdr);
-      if(v.brk){
+      // Same rule as the audio/on-screen view: a forced block-start (v.brk,
+      // already decided upstream) or a plain natural surah change — covers
+      // a page block that happens to cross into a new surah partway through.
+      if(needsBismillah(v, v.s!==last, v.brk)){
         plainLines.push(BISM);
         htmlParts.push(htmlHeaderWithBismillah(hdr));
       } else {
@@ -1032,11 +1067,10 @@ function copyAllVerses(){
       last=v.s;
     }
     const t=(TEXT[v.s]||[])[v.a-1];
-    const line = ayahLine(v.a, t?t.text:'');
-    plainLines.push(line);
-    htmlParts.push(htmlP(line));
+    runLines.push(ayahLine(v.a, t?t.text:''));
     count++;
   });
+  flushRun();
   copyRich(plainLines.join('\n'), htmlParts.join('\n'), `Copied ${count} verse${count>1?'s':''}`);
 }
 
@@ -1247,6 +1281,20 @@ async function loadSurah(n){
     try{ await DB.put('text', n, c); }catch(e){}
   }
   TEXT[n] = c; return c;
+}
+// Maps a Mushaf page (1–604, the standard Madani layout) to the surah+ayah
+// span(s) on it — same API already used for surah text, just a different
+// lookup on it, so there's no new data source. Caches the (surah,ayah) list
+// only; the actual text for any surah touched still goes through loadSurah
+// (and its own offline cache), never stored here directly.
+let PAGES = {};
+async function loadPage(n){
+  if(PAGES[n]) return PAGES[n];
+  let r; try{ r = await fetchT(`${API}/page/${n}/quran-uthmani`); }
+  catch(e){ throw E('NET_PAGE', 'Page '+n+' stalled — check your connection'); }
+  if(!r.ok) throw E('NET_PAGE_'+r.status, 'Page '+n+' failed ('+r.status+')');
+  const seq = (await r.json()).data.ayahs.map(a=>({s:a.surah.number, a:a.numberInSurah}));
+  PAGES[n] = seq; return seq;
 }
 async function getBytes(s,a){
   const k = `${S.qari}/${pad3(s)}${pad3(a)}`;
@@ -1616,7 +1664,7 @@ async function exportSeparateBlocks(){
   const files = [];
   for(let bi=0; bi<BLOCKS.length; bi++){
     const b = BLOCKS[bi];
-    logLine(`Block ${bi+1} of ${BLOCKS.length} — ${sName(b.surah)} ${b.from}-${b.to}`, 'in');
+    logLine(`Block ${bi+1} of ${BLOCKS.length} — ${blockLabel(b)}`, 'in');
     const r = await stitch(stitchItems([b]), ()=>0, prog);
     PARTS=r.parts; SEG=r.seg; TOTAL=r.total;   // buildLRC/buildSRT read these globals
     const base = blockLabel(b);
@@ -1789,6 +1837,30 @@ function budget(){
     note.textContent = tips.join(' ');
   }
 }
+// Drill drills one surah + an ayah range — it has no way to represent a
+// range that crosses surahs. So a page can only be "used" here when it sits
+// entirely inside one surah; otherwise this just points you to Stitch,
+// which takes any page exactly as it is, surahs and all.
+async function usePageInDrill(){
+  const n = Math.max(1, Math.min(604, +$('dpage').value || 1));
+  const btn=$('dpageuse'); btn.disabled=true; btn.textContent='Loading…';
+  try{
+    const seq = await loadPage(n);
+    const surahs = new Set(seq.map(x=>x.s));
+    if(surahs.size>1){
+      toast(`Page ${n} has more than one surah on it — add it in Stitch instead`);
+    } else {
+      const s = [...surahs][0];
+      const f = seq[0].a, t = seq[seq.length-1].a;
+      await loadSurah(s);
+      $('surah').value = s; fillAyat($('surah'),$('from'),$('to'), f, t); sync(); budget();
+      toast(`Page ${n} — ${sName(s)} ${f}–${t}`);
+    }
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load that page' : 'Offline — page lookup needs a connection');
+  }
+  btn.disabled=false; btn.textContent='Use page';
+}
 // Show the ayat with no audio and no download — so a range can be checked and
 // refined before committing to a stitch. Text is tiny and usually cached.
 async function preview(){
@@ -1843,7 +1915,7 @@ async function stitchPreviewAll(){
   if(!BLOCKS.length) return toast('No blocks yet — add one first');
   const btn=$('sprevall'); btn.disabled=true; btn.textContent='Loading…';
   try{
-    for(const b of BLOCKS) await loadSurah(b.surah);
+    for(const b of BLOCKS) await blockLoad(b);
     if(el) el.pause();
     SEG=[]; PARTS=[]; TOTAL=0; segI=-1;
     MODE='stitch';
@@ -1852,7 +1924,7 @@ async function stitchPreviewAll(){
     $('bar').hidden=true; $('exprow').hidden=true;
     $('logwrap').hidden=true;
     $('copyall').hidden=false;
-    const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
+    const names = BLOCKS.map(b=> b.page!=null ? `Page ${b.page}` : `${sName(b.surah)} ${b.from}-${b.to}`);
     $('ptitle').textContent = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
     $('psub').textContent = 'Preview — text only';
     showPlayer('stc');
@@ -1926,36 +1998,77 @@ async function startOrArm(){
 }
 
 /* -------------------------------------------------------------- stitch tab */
-const blockAyat = b => b.to - b.from + 1;
+// A block is either a surah range {surah,from,to} (always one surah) or a
+// page {page} (whatever surahs actually sit on that Mushaf page — a page
+// near the end of the Qur'an can hold several short surahs). blockSeq flattens
+// either shape into a plain (surah,ayah) list so everything downstream —
+// audio building, on-screen preview, copy — only ever deals with one shape.
+const blockSeq = b => b.page!=null ? (PAGES[b.page]||[])
+  : Array.from({length: Math.max(0, b.to-b.from+1)}, (_,i)=>({s:b.surah, a:b.from+i}));
+const blockAyat = b => blockSeq(b).length;
+const blockSurahSet = b => new Set(blockSeq(b).map(x=>x.s));
+// Ensures a block's content is actually loaded (text + offline cache) before
+// it's used — a page never caches text itself, it just resolves to the
+// surahs it touches and loads each the normal way.
+async function blockLoad(b){
+  if(b.page!=null){
+    const seq = await loadPage(b.page);
+    for(const s of new Set(seq.map(x=>x.s))) await loadSurah(s);
+  } else {
+    await loadSurah(b.surah);
+  }
+}
 // Bismillah here is a block-boundary marker, not a recitation — it tells the
 // listener "a block starts here," including into Surah 9 (which has no
 // canonical Bismillah) and even when the next block picks up exactly where
 // the last one left off. The one true exception is a block starting at
 // Al-Fātiḥah 1:1 — that ayah already IS the Bismillah, so adding another
-// would just repeat it.
-const blockOpensWithBismillah = b => !(b.surah===1 && b.from===1);
+// would just repeat it. A page block never forces one at all — a page is
+// taken exactly as it is; if it happens to cross into a new surah partway
+// through, that surah still gets its own Bismillah, but only because
+// needsBismillah() below treats that the same as any natural surah change,
+// not because the page itself demanded a marker.
+const blockOpensWithBismillah = b => b.page==null && !(b.surah===1 && b.from===1);
+// Whether a Bismillah belongs right before one ayah in a flattened sequence.
+// `forced` is true only at the very first ayah of a block that demands one
+// regardless of context (blockOpensWithBismillah). Without that, a Bismillah
+// still belongs wherever one naturally does: entering a new surah other than
+// 9 (no canonical Bismillah) or Al-Fātiḥah's own first ayah (already IS one).
+const needsBismillah = (v, newSurah, forced) =>
+  forced || (newSurah && v.s!==9 && !(v.s===1 && v.a===1));
 // Both take an optional block list so a single block can be built on its own
 // (separate-file export) without touching the global BLOCKS/multi-block path.
 function stitchItems(blocks=BLOCKS){
   const items = [];
+  let last = null;
   blocks.forEach(b=>{
-    if(blockOpensWithBismillah(b))
-      items.push({s:1, a:1, meta:{k:'listen', bism:true}});
-    for(let i=b.from;i<=b.to;i++) items.push({s:b.surah, a:i, meta:{k:'listen'}});
+    const forcedStart = blockOpensWithBismillah(b);
+    blockSeq(b).forEach((v,i)=>{
+      const newSurah = v.s !== last;
+      if(needsBismillah(v, newSurah, forcedStart && i===0))
+        items.push({s:1, a:1, meta:{k:'listen', bism:true}});
+      items.push({s:v.s, a:v.a, meta:{k:'listen'}});
+      last = v.s;
+    });
   });
   return items;
 }
 function stitchView(blocks=BLOCKS){
-  const v = [];
+  const out = [];
+  let last = null;
   blocks.forEach(b=>{
-    const brk = blockOpensWithBismillah(b);
-    for(let i=b.from;i<=b.to;i++) v.push({s:b.surah, a:i, brk: brk && i===b.from});
+    const forcedStart = blockOpensWithBismillah(b);
+    blockSeq(b).forEach((x,i)=>{
+      const newSurah = x.s !== last;
+      out.push({s:x.s, a:x.a, brk: needsBismillah(x, newSurah, forcedStart && i===0)});
+      last = x.s;
+    });
   });
-  return v;
+  return out;
 }
-// A block is always a single surah, so it always gets the same numbered
-// naming as any other single-surah export.
-const blockLabel = b => `${sNum(b.surah)} ${sName(b.surah)} ${b.from}-${b.to}`;
+// A page names itself (its number is already a unique reference); a surah
+// block keeps the same numbered naming as any other single-surah export.
+const blockLabel = b => b.page!=null ? `Page ${b.page}` : `${sNum(b.surah)} ${sName(b.surah)} ${b.from}-${b.to}`;
 function renderBlocks(){
   const box = $('blocks');
   if(!BLOCKS.length){
@@ -1964,9 +2077,14 @@ function renderBlocks(){
     box.innerHTML='';
     BLOCKS.forEach((b,i)=>{
       const brk = blockOpensWithBismillah(b);
+      const seq = blockSeq(b);
+      // A page's own Tanzil link, pointing at that page's first ayah — only
+      // shown next to a page block, not cluttering ordinary surah blocks.
+      const tanzilLink = (b.page!=null && seq[0])
+        ? ` · <a href="https://tanzil.net/#${seq[0].s}:${seq[0].a}" target="_blank" rel="noopener">View on Tanzil ↗</a>` : '';
       const d = document.createElement('div'); d.className='card';
-      d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat${brk?' · <span style="color:var(--gold)">opens with Bismillah</span>':''}</small></div><button class="x">×</button>`;
-      d.querySelector('b').textContent = `${i+1}. ${sName(b.surah)} ${b.from}–${b.to}`;
+      d.innerHTML = `<div class="g"><b></b><small>${blockAyat(b)} ayat${brk?' · <span style="color:var(--gold)">opens with Bismillah</span>':''}${tanzilLink}</small></div><button class="x">×</button>`;
+      d.querySelector('b').textContent = `${i+1}. ${b.page!=null ? blockLabel(b) : `${sName(b.surah)} ${b.from}–${b.to}`}`;
       d.querySelector('.x').onclick = ()=>{ BLOCKS.splice(i,1); saveB(); renderBlocks(); };
       box.appendChild(d);
     });
@@ -1981,9 +2099,12 @@ function sreadout(){
   let secs=0, known=true;
   const blockMB=[];
   BLOCKS.forEach(b=>{
-    const A = TEXT[b.surah];
-    if(!A){ known=false; blockMB.push(0); return; }
-    let bs=0; for(let i=b.from;i<=b.to;i++) bs += estAyah(A[i-1].text, b.surah, i) + stitchGap();
+    let bs=0;
+    for(const x of blockSeq(b)){
+      const A = TEXT[x.s];
+      if(!A || !A[x.a-1]){ known=false; blockMB.push(0); return; }
+      bs += estAyah(A[x.a-1].text, x.s, x.a) + stitchGap();
+    }
     secs += bs; blockMB.push(toMB(bs));
   });
   if(!known){
@@ -2030,15 +2151,35 @@ async function addBlock(){
   renderBlocks();
   toast(`Added ${sName(b.surah)} ${b.from}–${b.to}`);
 }
+// Adds a whole Mushaf page as one block — taken exactly as it is, never
+// split by surah. A page can legitimately hold several short surahs (the
+// last page of the Qur'an has three), and that's fine: blockSeq/stitchItems/
+// stitchView already treat any block as a flat (surah,ayah) sequence.
+async function addPageBlock(){
+  const n = Math.max(1, Math.min(604, +$('spage').value || 1));
+  $('spageadd').disabled=true; $('spageadd').textContent='Loading…';
+  try{
+    const seq = await loadPage(n);
+    for(const s of new Set(seq.map(x=>x.s))) await loadSurah(s);
+    BLOCKS.push({page:n}); saveB(); renderBlocks();
+    toast(`Added Page ${n}`);
+  }catch(e){
+    toast(navigator.onLine ? 'Could not load that page' : 'Offline — page lookup needs a connection');
+  }
+  $('spageadd').disabled=false; $('spageadd').textContent='Add page';
+}
 async function buildStitch(andPlay){
   if(!BLOCKS.length) return;
   MODE='stitch';
-  const names = BLOCKS.map(b=>`${sName(b.surah)} ${b.from}-${b.to}`);
+  const names = BLOCKS.map(b=> b.page!=null ? `Page ${b.page}` : `${sName(b.surah)} ${b.from}-${b.to}`);
   LABEL = names.length>2 ? `${names[0]} and ${names.length-1} more` : names.join(', ');
-  // Numbered only when every block is the same surah — a single leading
-  // number would be misleading once blocks span more than one.
-  const oneSurah = BLOCKS.every(b=>b.surah===BLOCKS[0].surah);
-  if(oneSurah) LABEL = `${sNum(BLOCKS[0].surah)} ${LABEL}`;
+  // Numbered only when every block, page or surah, resolves to the very same
+  // single surah — a leading number would be misleading once blocks span
+  // more than one (which a page block may do all on its own).
+  const surahsUsed = new Set();
+  BLOCKS.forEach(b=> blockSurahSet(b).forEach(s=>surahsUsed.add(s)));
+  const oneSurah = surahsUsed.size===1;
+  if(oneSurah) LABEL = `${sNum([...surahsUsed][0])} ${LABEL}`;
   $('sbuild').disabled=true; $('sexp').disabled=true;
   showPlayer('stc'); prepStart(); clearLog();
   $('copyall').hidden=false;
@@ -2047,7 +2188,7 @@ async function buildStitch(andPlay){
   logLine(`Building track — ${BLOCKS.length} block${BLOCKS.length>1?'s':''}`, 'in');
   try{
     logLine('Reading text…', 'in');
-    for(const b of BLOCKS) await loadSurah(b.surah);
+    for(const b of BLOCKS) await blockLoad(b);
     logLine('Text ready', 'ok');
     VIEW = stitchView(); renderView();
     ensureEl();   // see note in begin() — never await a source-less play()
@@ -2115,7 +2256,7 @@ function renderRecipes(){
     d.querySelector('.card-ts').textContent=fmtTS(rc.ts);
     d.querySelector('.g').onclick = async ()=>{
       BLOCKS = rc.blocks.map(b=>Object.assign({},b)); saveB(); renderBlocks();
-      for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
+      for(const b of BLOCKS){ try{ await blockLoad(b); }catch(e){} }
       renderBlocks(); tab('stc'); toast(`Loaded “${rc.name}”`);
     };
     d.querySelector('.x').onclick = e =>{ e.stopPropagation();
@@ -3022,8 +3163,10 @@ function boot(){
   };
   $('sfrom').onchange = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sto').value=$('sfrom').value; };
   $('sto').onchange   = ()=>{ if(+$('sto').value < +$('sfrom').value) $('sfrom').value=$('sto').value; };
+  $('dpageuse').onclick = usePageInDrill;
   $('spreview').onclick = stitchPreview;
   $('sadd').onclick   = addBlock;
+  $('spageadd').onclick = addPageBlock;
   $('sprevall').onclick = stitchPreviewAll;
   $('sbuild').onclick = ()=>buildStitch(true);
   $('sexp').onclick   = ()=>buildStitch(false);
@@ -3144,7 +3287,7 @@ function initUpdates(){
     fillAyat($('ssurah'),$('sfrom'),$('sto'),1,Math.min(10,cs));
     sync();
     try{ await loadSurah(S.surah); }catch(e){}
-    for(const b of BLOCKS){ try{ await loadSurah(b.surah); }catch(e){} }
+    for(const b of BLOCKS){ try{ await blockLoad(b); }catch(e){} }
     budget(); renderBlocks();
     // Read is the default tab — init it now that SURAHS are loaded
     ensureReadTab(); updateContinueChip();
