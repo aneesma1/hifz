@@ -434,6 +434,14 @@ h2:first-child{margin-top:0}
       <button class="btn dgr" id="rdclear">Clear</button>
     </div>
     <div id="rdtext"><div class="empty">Pick a surah to read, or search above.</div></div>
+    <div id="rdpageview" hidden>
+      <div class="row" style="align-items:center;margin-bottom:10px;gap:8px">
+        <button class="btn" id="rdpgprev" aria-label="Previous page" style="flex:0 0 auto;padding:8px 14px">‹</button>
+        <div style="flex:1;text-align:center;font-weight:600" id="rdpgtitle"></div>
+        <button class="btn" id="rdpgnext" aria-label="Next page" style="flex:0 0 auto;padding:8px 14px">›</button>
+      </div>
+      <div id="rdpgtext"></div>
+    </div>
   </div>
 
   <div id="rd-results" hidden>
@@ -718,7 +726,7 @@ h2:first-child{margin-top:0}
     <p>Hifz helps you memorise the Qur'an by <b>listening in a structured, repeating pattern</b> — the "stacked" method — and by making plain listening tracks. Everything works offline once loaded, and audio keeps playing with the screen locked.</p>
 
     <h3>Read tab</h3>
-    <p><b>Go to surah</b> opens a surah's full text, scrolled to where you left off if you've read it before. <b>Go to page</b> works the same way from a standard Mushaf page number (1–604) instead — it switches to whichever surah that page starts in and scrolls straight to it.</p>
+    <p><b>Go to surah</b> opens a surah's full, continuous text, scrolled to where you left off if you've read it before. <b>Go to page</b> is different on purpose: it opens a page-only view showing just that standard Mushaf page (1–604) and nothing before or after it, with its own number and surah name at the top and « » arrows to step to the page before or after — the same way Tanzil's own site browses by page. Picking a surah from the list above switches you back to the normal continuous view.</p>
 
     <h3>The stacked method</h3>
     <p>Rather than replaying a whole passage over and over, stacking builds it up ayah by ayah, replaying what came before each new one so the joins stick. For ayat 1–5 with "each ayah ×3" and "range ×5", you hear:</p>
@@ -833,8 +841,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v41';
-const BUILD   = '2026-11-14 17:11 UTC';
+const VERSION = 'v42';
+const BUILD   = '2026-11-14 18:42 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1078,7 +1086,11 @@ function copyAllVerses(){
       // Same rule as the audio/on-screen view: a forced block-start (v.brk,
       // already decided upstream) or a plain natural surah change — covers
       // a page block that happens to cross into a new surah partway through.
-      if(needsBismillah(v, v.s!==last, v.brk)){
+      // Uses entersNewSurah rather than a bare `v.s!==last`, so the very
+      // first ayah copied doesn't wrongly look like a "new surah" just
+      // because `last` hadn't been set yet — e.g. copying a Drill range or
+      // page that starts mid-surah shouldn't open with a Bismillah.
+      if(needsBismillah(v, entersNewSurah(v, last), v.brk)){
         plainLines.push(BISM);
         htmlParts.push(htmlHeaderWithBismillah(hdr));
       } else {
@@ -1291,6 +1303,11 @@ async function loadSurah(n){
   if(TEXT[n]) return TEXT[n];
   let c = null;
   try{ c = await DB.get('text', n); }catch(e){}
+  // A cache saved before v41 added page numbers won't have a `.page` field
+  // on its ayahs — treat that exactly like a cache miss so it silently
+  // re-fetches once, rather than permanently showing with no page number
+  // until the user happens to clear their cache.
+  if(c && !(c[0] && c[0].page)) c = null;
   if(!c){
     let r; try{ r = await fetchT(`${API}/surah/${n}/quran-uthmani`); }
     catch(e){ throw E('NET_TEXT', 'Text for surah '+n+' stalled — check your connection'); }
@@ -1535,7 +1552,10 @@ function renderView(){
   const multi = new Set(VIEW.map(v=>v.s)).size > 1;
   let last = null;
   VIEW.forEach(v=>{
-    const newSurah = v.s !== last;
+    // entersNewSurah (not a bare v.s!==last) so the very first ayah on
+    // screen doesn't get a heading/Bismillah just because `last` hadn't
+    // been set yet — e.g. a Drill range or page block starting mid-surah.
+    const newSurah = entersNewSurah(v, last);
     if(newSurah || v.brk){
       if(newSurah && multi){
         const h = document.createElement('div'); h.className='shead';
@@ -2062,13 +2082,21 @@ const needsBismillah = (v, newSurah, forced) =>
   forced || (newSurah && v.s!==9 && !(v.s===1 && v.a===1));
 // Both take an optional block list so a single block can be built on its own
 // (separate-file export) without touching the global BLOCKS/multi-block path.
+// Entering a new surah naturally: differs from whatever ayah came right
+// before it in the flattened sequence — except at the very first ayah of
+// the whole sequence, where `last` is still null and there's nothing to
+// differ from. Treating "last is null" itself as a surah change would wrongly
+// fire for a page (or any range) that starts mid-surah — e.g. page 345 opens
+// on Al-Muminoon 43, not a surah's start — so the first item only counts as
+// entering a new surah when it genuinely IS that surah's first ayah.
+const entersNewSurah = (v, last) => last==null ? v.a===1 : v.s!==last;
 function stitchItems(blocks=BLOCKS){
   const items = [];
   let last = null;
   blocks.forEach(b=>{
     const forcedStart = blockOpensWithBismillah(b);
     blockSeq(b).forEach((v,i)=>{
-      const newSurah = v.s !== last;
+      const newSurah = entersNewSurah(v, last);
       if(needsBismillah(v, newSurah, forcedStart && i===0))
         items.push({s:1, a:1, meta:{k:'listen', bism:true}});
       items.push({s:v.s, a:v.a, meta:{k:'listen'}});
@@ -2083,7 +2111,7 @@ function stitchView(blocks=BLOCKS){
   blocks.forEach(b=>{
     const forcedStart = blockOpensWithBismillah(b);
     blockSeq(b).forEach((x,i)=>{
-      const newSurah = x.s !== last;
+      const newSurah = entersNewSurah(x, last);
       out.push({s:x.s, a:x.a, brk: needsBismillah(x, newSurah, forcedStart && i===0)});
       last = x.s;
     });
@@ -2567,26 +2595,68 @@ function clearReadView(){
   }
   sel.value = '';
   rdSurah = null; readTabScrolled = false;
+  rdPageNum = null; $('rdpageview').hidden = true; $('rdtext').hidden = false;
   $('rdtext').innerHTML = '<div class="empty">Pick a surah to read, or search above.</div>';
 }
-// "Go to page" in Read — behaves exactly like picking a surah: swaps the
-// screen to whichever surah that page starts in, then scrolls straight to
-// its first ayah. Reuses the same page lookup Stitch/Drill already use.
+// "Go to page" in Read — a dedicated, page-scoped view showing ONLY that
+// Mushaf page's ayat (nothing before or after it), with its own « » stepper
+// to move to the page before/after — the same idea as Tanzil's own page
+// browsing. Distinct from renderReadSurah's continuous surah view (which
+// "Go to surah" / picking a surah from the dropdown switches back to) and
+// from openInContext's small context peek (used elsewhere, e.g. search).
+let rdPageNum = null;
+async function renderReadPage(n){
+  n = Math.max(1, Math.min(604, n||1));
+  rdPageNum = n; readTabScrolled = false;
+  $('rdtext').hidden = true; $('rdpageview').hidden = false;
+  $('rdpgprev').disabled = true; $('rdpgnext').disabled = true;
+  const box = $('rdpgtext');
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  $('rdpgtitle').textContent = `Page ${n}`;
+  let seq;
+  try{
+    seq = await loadPage(n);
+    for(const s of new Set(seq.map(x=>x.s))) await loadSurah(s);
+  }catch(e){
+    box.innerHTML = '<div class="empty">Could not load that page.</div>';
+    toast(navigator.onLine ? 'Could not load that page' : 'Offline — page lookup needs a connection');
+    $('rdpgprev').disabled = n<=1; $('rdpgnext').disabled = n>=604;
+    return;
+  }
+  const multi = new Set(seq.map(x=>x.s)).size > 1;
+  const first = seq[0], last = seq[seq.length-1];
+  // Orientation at a glance: full surah+range for a single-surah page (it's
+  // all one span anyway); just the first surah's number+name — no range —
+  // for a page that crosses into others, since a combined range across
+  // different surahs wouldn't mean anything as one number.
+  $('rdpgtitle').textContent = multi
+    ? `${sNum(first.s)} ${sName(first.s)} · Page ${n}`
+    : `${sNum(first.s)} ${sName(first.s)} ${first.a}–${last.a} · Page ${n}`;
+  box.innerHTML = '';
+  let prevS = null;
+  seq.forEach(x=>{
+    // entersNewSurah, not a bare "differs from prevS" — a page that opens
+    // mid-surah (the common case) must NOT look like a surah-start just
+    // because nothing came before it in this view.
+    const newSurah = entersNewSurah(x, prevS);
+    if(newSurah && multi){
+      const h=document.createElement('div'); h.className='shead';
+      h.textContent = `${x.s}. ${sName(x.s)}`; box.appendChild(h);
+    }
+    if(needsBismillah(x, newSurah, false)){
+      const b=document.createElement('div'); b.className='bismline'; b.textContent=BISM; box.appendChild(b);
+    }
+    const t=(TEXT[x.s]||[])[x.a-1];
+    box.appendChild(verseRowEl(x.s, x.a, t?t.text:'', false));
+    prevS = x.s;
+  });
+  document.documentElement.style.setProperty('--asz', S.asz+'px');
+  $('rdpgprev').disabled = n<=1; $('rdpgnext').disabled = n>=604;
+}
 async function goToPage(){
   const n = Math.max(1, Math.min(604, +$('rdpage').value || 1));
   const btn=$('rdpagego'); btn.disabled=true; btn.textContent='…';
-  try{
-    const seq = await loadPage(n);
-    const first = seq[0];
-    $('rdsurah').value = first.s;
-    const ph = $('rdsurah').querySelector('option[value=""]'); if(ph) ph.remove();
-    await loadSurah(first.s);
-    renderReadSurah(first.s);
-    setTimeout(()=> scrollToAyah(first.s, first.a, true), 120);
-    toast(`Page ${n} — ${sName(first.s)} ${first.a}`);
-  }catch(e){
-    toast(navigator.onLine ? 'Could not load that page' : 'Offline — page lookup needs a connection');
-  }
+  await renderReadPage(n);
   btn.disabled=false; btn.textContent='Go';
 }
 function updateContinueChip(){
@@ -2598,6 +2668,7 @@ function updateContinueChip(){
 let rdSurah = 1;
 function renderReadSurah(n){
   rdSurah = n; readTabScrolled = false;   // reset scroll tracking for new surah
+  rdPageNum = null; $('rdpageview').hidden = true; $('rdtext').hidden = false;
   const box = $('rdtext'); box.innerHTML='';
   const arr = TEXT[n];
   if(!arr){ box.innerHTML = '<div class="empty">Loading…</div>'; return; }
@@ -3144,6 +3215,8 @@ function boot(){
   $('rdclear').onclick = clearReadView;
   $('rdpagego').onclick = goToPage;
   $('rdpage').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); goToPage(); } });
+  $('rdpgprev').onclick = ()=>{ if(rdPageNum>1) renderReadPage(rdPageNum-1); };
+  $('rdpgnext').onclick = ()=>{ if(rdPageNum<604) renderReadPage(rdPageNum+1); };
   let rdtimer;
   $('rdfilter').oninput = ()=>{ clearTimeout(rdtimer); rdtimer=setTimeout(()=>{
     const hits = searchSurah($('rdfilter').value);
