@@ -845,8 +845,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v43';
-const BUILD   = '2026-11-15 09:20 UTC';
+const VERSION = 'v44';
+const BUILD   = '2026-11-15 10:15 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -2796,7 +2796,14 @@ let lastQuery=''; // persists so back-to-results restores the highlighted view
 /* ---- per-ayah inline player ---- */
 let ayahAudio = null, ayahAbort = null;
 let autoPlaying = false, autoSurah = 0, autoAyah = 0, autoReps = 1;
-// Global chip state — shared across all ayah rows so they always agree
+// Global chip state — shared across all ayah rows so they always agree.
+// globalReps (1 or 3) and globalFlow are independent settings, not a single
+// 3-way choice: Flow is an on/off toggle that combines with whichever rep
+// count is selected ("3x + Flow" flows through the surah, repeating each
+// ayah 3 times), rather than hiding the rep count the moment Flow is on.
+// Neither is ever changed by starting or stopping playback — only by
+// tapping a chip (see verseRowEl) — so they persist exactly as selected
+// across a Stop, a finished Flow, or switching surahs.
 let globalReps = 1, globalFlow = false;
 let userScrolled = false, scrollResumeTimer = null;
 const SCROLL_PAUSE_MS = 3000;
@@ -2807,11 +2814,13 @@ const STOP_SVG = `<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="
 
 // Repaint ALL chip sets in the document to reflect global state.
 // This ensures tapping one row's chip updates every other row too.
+// Flow and the rep count are independent, so both can show active at once
+// (e.g. "3x" and "Flow" both lit = flow through the surah, 3x each) —
+// Flow is never allowed to hide which rep count is actually in use.
 function repaintAllChips(){
   document.querySelectorAll('.rep-chip').forEach(c=>{
     const isFlow = c.dataset.r==='flow';
-    const isRep  = !isFlow && +c.dataset.r===globalReps;
-    c.classList.toggle('active', globalFlow ? isFlow : isRep);
+    c.classList.toggle('active', isFlow ? globalFlow : (+c.dataset.r===globalReps));
   });
   // helper text: show under all ayah-play rows when flow is active
   document.querySelectorAll('.flow-hint').forEach(el=>{
@@ -2848,7 +2857,10 @@ function hideNowBar(){ $('nowbar').hidden = true; }
 function stopAyahPlayer(){
   if(ayahAbort) ayahAbort();
   ayahAbort = null; ayahAudio = null;
-  autoPlaying = false; globalFlow = false;
+  autoPlaying = false;
+  // globalFlow is deliberately left as it was — Stop ends the current
+  // playback, not the selected mode, so pressing Play again resumes Flow
+  // if Flow was selected, the same way 1x/3x already survive a Stop.
   document.querySelectorAll('.ayah-playbtn').forEach(b=>setPlayBtn(b, false));
   document.querySelectorAll('.ayah-progfill').forEach(f=>{ f.style.width='0%'; });
   repaintAllChips();
@@ -2931,13 +2943,15 @@ async function autoPlayFrom(s, startA, reps){
     const pf  = row?.querySelector('.ayah-progfill');
     const ok = await playAyahReps(s, ay.n, reps, btn||document.createElement('button'), pf, true);
     if(!ok || !autoPlaying) break;
-    if(i===ayat.length-1){
-      toast(`${sName(s)} — complete`);
-      autoPlaying=false;
-    }
+    if(i===ayat.length-1) toast(`${sName(s)} — complete`);
   }
-  if(!autoPlaying) return;
-  autoPlaying=false; globalFlow=false; repaintAllChips(); hideNowBar();
+  // Reaches here whether the surah finished naturally or Stop broke the
+  // loop mid-flow (stopAyahPlayer already reset its own state) — either
+  // way the now-bar shouldn't linger. globalFlow is left untouched: a
+  // finished Flow stays selected, same as an explicit Stop does, so Play
+  // resumes flowing rather than quietly reverting to single-ayah mode.
+  autoPlaying = false;
+  hideNowBar();
 }
 
 function verseRowEl(s, a, text, showRef, query){
@@ -2976,26 +2990,41 @@ function verseRowEl(s, a, text, showRef, query){
     const playBtn  = d.querySelector('.ayah-playbtn');
     const progFill = d.querySelector('.ayah-progfill');
     const chips    = d.querySelectorAll('.rep-chip');
-    // paint this row's chips to match current global state
+    // Paint this row's chips to match current global state — same rule as
+    // repaintAllChips(), duplicated here because this row isn't attached to
+    // the document yet (repaintAllChips can't reach it until the caller
+    // appends it below).
     chips.forEach(c=>{
       const isFlow = c.dataset.r==='flow';
-      c.classList.toggle('active', globalFlow ? isFlow : (!isFlow && +c.dataset.r===globalReps));
+      c.classList.toggle('active', isFlow ? globalFlow : (+c.dataset.r===globalReps));
     });
     function startPlay(isFlow){
       if(isFlow){
-        globalFlow = true; autoPlaying = true;
+        autoPlaying = true;
         repaintAllChips();
         autoPlayFrom(s, a, globalReps);
       } else {
-        globalFlow = false; autoPlaying = false;
+        autoPlaying = false;
         repaintAllChips();
         playAyahReps(s, a, globalReps, playBtn, progFill, false);
       }
     }
+    // A chip only ever selects a setting — it never starts or stops
+    // playback itself; only the round Play/Stop button does that. 1x/3x
+    // stay mutually exclusive; Flow is a separate on/off toggle, so it can
+    // be combined with either rather than hiding which rep count is in
+    // use. Re-tapping an already-selected rep count is a no-op. If
+    // something is already playing and the tap genuinely changes the
+    // setup, it stops first — nothing keeps running under a setting you
+    // just changed your mind about — and waits; you press Play yourself to
+    // resume under the new setup.
     chips.forEach(c=>{
       c.onclick = e=>{ e.stopPropagation();
-        if(c.dataset.r==='flow'){ startPlay(true); }
-        else { globalReps=+c.dataset.r; globalFlow=false; repaintAllChips(); startPlay(false); }
+        const isFlow = c.dataset.r==='flow';
+        if(!isFlow && +c.dataset.r===globalReps) return;   // already selected
+        if(autoPlaying || ayahAudio) stopAyahPlayer();
+        if(isFlow) globalFlow = !globalFlow; else globalReps = +c.dataset.r;
+        repaintAllChips();
       };
     });
     playBtn.onclick = e=>{ e.stopPropagation();
