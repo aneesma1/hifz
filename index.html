@@ -535,7 +535,10 @@ h2:first-child{margin-top:0}
     <button class="btn" id="expmp3" hidden></button>
   </div>
   <div id="copyall" hidden style="margin-bottom:6px">
-    <button class="btn" id="copyallbtn">Copy all verses</button>
+    <div class="row">
+      <button class="btn" id="copyallbtn">Copy all verses</button>
+      <button class="btn" id="copyallplainbtn">Copy (plain)</button>
+    </div>
   </div>
   <div id="text"><div class="empty">Choose a surah and range, then tap Start.<br>Or build a listening track on Stitch.</div></div>
 </section>
@@ -772,6 +775,7 @@ h2:first-child{margin-top:0}
 
     <h3>Copying verses</h3>
     <p>Every <b>copy</b> button — on the reading screen, in search, in Saved/Bookmarks, and <b>Copy all verses</b> in a Stitch build — copies a header (surah number, name, and ayah/ayat range) above the Arabic text. Paste into Word (or any rich editor) and the header comes through bold with the Arabic right-to-left below it; paste into Notepad or a plain editor and you get the same header and text as plain lines. Verses within one unbroken passage are joined into a single flowing paragraph, the way they sit on a Qur'an page, rather than one line per ayah; a new passage (a surah change, or a new block in a Stitch build) starts a fresh header line, with Bismillah added wherever a block begins.</p>
+    <p>Next to <b>Copy all verses</b> on the stacked/listening screen there's also a <b>Copy (plain)</b> button. The regular copy keeps the full Uthmani text exactly as printed in the Mushaf, including the small pause and recitation marks (ۖ ۚ ۩ and similar) — but some apps' fonts don't have those specific marks, and show empty boxes in their place (this doesn't mean anything is wrong with the copy; it's just a font gap in that app). <b>Copy (plain)</b> removes only that rare layer, keeping every letter and every ordinary vowel mark, so the pasted text looks right even in an app with limited Arabic font support — Joplin and most note-taking apps included.</p>
 
     <h3>Settings worth knowing</h3>
     <ul>
@@ -841,8 +845,8 @@ h2:first-child{margin-top:0}
    ========================================================================== */
 
 const APP_URL = 'https://aneesma1.github.io/hifz/';
-const VERSION = 'v42';
-const BUILD   = '2026-11-14 18:42 UTC';
+const VERSION = 'v43';
+const BUILD   = '2026-11-15 09:20 UTC';
 
 const RECITERS = [
   {id:'Husary_128kbps',              name:'Mahmoud Khalil Al-Hussary', bps:128},
@@ -1033,6 +1037,17 @@ const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 // Markdown file or as the bold line inside the rich/Word paste.
 const copyHeader = (surah, from, to=from) =>
   `${sNum(surah)}: ${sName(surah)} — ${from===to ? `Ayah ${from}` : `Ayat ${from}–${to}`}`;
+// Strips the Qur'an-specific annotation layer — waqf/pause signs, the
+// rub-el-hizb and sajda markers, and the small silent/elided-letter marks —
+// while keeping every letter and every ordinary vowel mark (fatha, damma,
+// kasra, sukun, shadda, tanween, maddah) plus superscript alef and alef
+// wasla, both common outside the Qur'an too and unaffected by this gap.
+// U+06D6–U+06ED is the whole range: confirmed by scanning the entire
+// Uthmani text (all 6,236 ayahs) that every rare mark in the Qur'an falls
+// inside it and nothing else does. Used only by "Copy (plain)" below, for
+// pasting into apps whose font doesn't cover that rarer range (e.g. a
+// note-taking app) — at the honest cost of losing those pause-mark cues.
+const stripQuranMarks = text => text.replace(/[ۖ-ۭ]/g, '');
 // ﴿٢١٦﴾ ayah text — the ornate verse-number form used everywhere an ayah is
 // shown or copied, including inside the LRC/SRT exports (via segLyric).
 const ayahLine = (a, text) => `﴿${arabicNum(a)}﴾ ${text}`;
@@ -1104,6 +1119,43 @@ function copyAllVerses(){
   });
   flushRun();
   copyRich(plainLines.join('\n'), htmlParts.join('\n'), `Copied ${count} verse${count>1?'s':''}`);
+}
+// Plain-text twin of copyAllVerses() above, for pasting into apps whose font
+// doesn't cover the rare Qur'an-annotation marks (see stripQuranMarks) —
+// same per-run headers and the same Bismillah placement, but every ayah
+// (and the Bismillah line itself, just as marked as any other ayah) has
+// that rare-mark layer stripped first. Written as plain text only — no HTML
+// blob at all — so there's no chance a destination app reaches for an
+// unstripped copy instead; the whole point here is one guaranteed-clean
+// result, not a choice between two clipboard entries.
+function copyAllVersesPlain(){
+  if(!VIEW.length) return toast('Nothing to copy yet');
+  const seen=new Set();
+  const plainLines=[];
+  let last=null, count=0, runLines=[];
+  const flushRun = () => {
+    if(!runLines.length) return;
+    plainLines.push(runLines.join(' '));
+    runLines = [];
+  };
+  VIEW.forEach((v,i)=>{
+    const key=v.s+':'+v.a; if(seen.has(key)) return; seen.add(key);
+    if(v.s!==last || v.brk){
+      flushRun();
+      let j=i, to=v.a;
+      while(j<VIEW.length && VIEW[j].s===v.s && !(j>i && VIEW[j].brk)){ to=VIEW[j].a; j++; }
+      const hdr = copyHeader(v.s, v.a, to);
+      if(plainLines.length) plainLines.push('');
+      plainLines.push(hdr);
+      if(needsBismillah(v, entersNewSurah(v, last), v.brk)) plainLines.push(stripQuranMarks(BISM));
+      last=v.s;
+    }
+    const t=(TEXT[v.s]||[])[v.a-1];
+    runLines.push(ayahLine(v.a, stripQuranMarks(t?t.text:'')));
+    count++;
+  });
+  flushRun();
+  copyText(plainLines.join('\n'), `Copied ${count} verse${count>1?'s':''} — plain`);
 }
 
 /* --------------------------------------------------------------- storage */
@@ -3266,6 +3318,7 @@ function boot(){
   $('explisten').onclick = ()=>exportAudio(false);   // plain MP3
   $('expmusi').onclick   = ()=>exportAudio(true);    // MP3 + embedded verses + .lrc
   $('copyallbtn').onclick = copyAllVerses;
+  $('copyallplainbtn').onclick = copyAllVersesPlain;
   $('logcopy').onclick = ()=>{
     const text = logRows.join('\n') + `\nHifz ${VERSION} · ${BUILD}\n${navigator.userAgent}`;
     copyText(text, 'Activity log copied');
